@@ -1,6 +1,6 @@
 // AVEVA_RENDERER_START
-// AVEVA Architecture Micro SVG Renderer — v1.0 (JS/ESM)
-// Public API: extractAvevaBlock, parseAvevaArch, renderAvevaArch, renderFromLLM, StyleTokens
+// AVEVA Architecture Micro SVG Renderer — v1.0 (ESM)
+// Public API: StyleTokens, extractAvevaBlock, parseAvevaArch, renderAvevaArch, renderFromLLM
 
 export const StyleTokens = {
   color: {
@@ -19,15 +19,17 @@ export const StyleTokens = {
 
 function esc(s){ return (s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+// --- Parsing helpers ---
 export function extractAvevaBlock(text){
-  const re = /```aveva-arch\n([\s\S]*?)\n```/m; const m = text.match(re);
+  const re = /```aveva-arch\n([\s\S]*?)\n```/m;
+  const m = text.match(re);
   if(!m) throw new Error('No ```aveva-arch fenced block found.');
   return m[1];
 }
 
-export function parseAvevaArch(block){ // JSON-only for zero deps
+export function parseAvevaArch(block){ // JSON-only to avoid extra deps
   const trimmed = block.trim();
-  if(!trimmed.startsWith('{')) throw new Error('Expecting JSON in `aveva-arch` fence.');
+  if(!trimmed.startsWith('{')) throw new Error('Expecting JSON inside the `aveva-arch` fence.');
   return JSON.parse(trimmed);
 }
 
@@ -36,6 +38,7 @@ export function renderFromLLM(llmText, options){
   return renderAvevaArch(data, options);
 }
 
+// --- SVG bits ---
 function defaultCSS(t=StyleTokens){
   return `.lane{fill:${t.color.surface};stroke:${t.color.grid};stroke-width:1}
 .node{fill:${t.color.surface};stroke:${t.color.primary};stroke-width:${t.geom.nodeStroke};rx:${t.geom.nodeRadius}}
@@ -54,52 +57,72 @@ function defaultDefs(t=StyleTokens){
 }
 
 function iconForKind(kind){ return kind==='database'?'sym-database':kind==='cloud'?'sym-cloud':kind==='edge'?'sym-edge':'sym-app'; }
-
 function manhattanPath(a,b){
-  const ax=a.x+a.w, ay=a.y+a.h/2, bx=b.x, by=b.y+b.h/2; // within lane coords
-  const mx=ax+20, nx=bx-20; // elbows
+  const ax=a.x+a.w, ay=a.y+a.h/2, bx=b.x, by=b.y+b.h/2;
+  const mx=ax+20, nx=bx-20;
   return `M ${ax} ${ay} L ${mx} ${ay} L ${mx} ${by} L ${nx} ${by} L ${bx} ${by}`;
 }
+function midpoint(d){
+  const nums=(d.match(/[-\d.]+/g)||[]).map(Number);
+  const i=Math.floor(nums.length/2);
+  return {x:nums[i-2]||0,y:nums[i-1]||0};
+}
 
-function midpoint(d){ const nums=(d.match(/[-\d.]+/g)||[]).map(Number); const i=Math.floor(nums.length/2); return {x:nums[i-2]||0,y:nums[i-1]||0}; }
-
+// --- Main renderer ---
 export function renderAvevaArch(data, opts={}){
   const width = opts.width ?? 1400, height = opts.height ?? 720;
   const laneGap = opts.laneGap ?? 16, lanePadding = opts.lanePadding ?? 16;
-  const lanes = data.lanes||[]; const laneH = Math.floor((height - laneGap*(lanes.length+1)) / Math.max(1,lanes.length));
 
-  const laneMap = new Map(); let y=laneGap; for(const l of lanes){ laneMap.set(l.id,{y,title:l.title}); y+=laneH+laneGap; }
+  const lanes = data.lanes || [];
+  const laneH = Math.floor((height - laneGap*(lanes.length+1)) / Math.max(1,lanes.length));
 
-  const parts=[]; parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`);
+  const laneMap = new Map();
+  let y = laneGap;
+  for(const l of lanes){ laneMap.set(l.id,{ y, title:l.title }); y += laneH + laneGap; }
+
+  const parts = [];
+  parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`);
   parts.push(`<style>${defaultCSS()}</style><defs>${defaultDefs()}</defs>`);
   parts.push(`<rect x="0" y="0" width="${width}" height="${height}" fill="${StyleTokens.color.bg}"/>`);
 
-  const title=data.metadata?.title||'Architecture', sub=data.metadata?.subtitle||''; const env=data.metadata?.env;
+  const title = data.metadata?.title || 'Architecture';
+  const subtitle = data.metadata?.subtitle || '';
+  const env = data.metadata?.env;
   parts.push(`<g transform="translate(${laneGap},${laneGap/2})">`);
   parts.push(`<text class="title" x="0" y="0" dominant-baseline="hanging" style="font:${StyleTokens.type.title}; text-transform:uppercase; letter-spacing:.08em;">${esc(title)}</text>`);
-  if(sub) parts.push(`<text x="0" y="18" style="font:${StyleTokens.type.nodeSub}; fill:${StyleTokens.color.muted};">${esc(sub)}</text>`);
-  if(env){ const color = env==='prod'?StyleTokens.color.success:env==='nonprod'?StyleTokens.color.warn:StyleTokens.color.danger;
+  if(subtitle) parts.push(`<text x="0" y="18" style="font:${StyleTokens.type.nodeSub}; fill:${StyleTokens.color.muted};">${esc(subtitle)}</text>`);
+  if(env){
+    const color = env==='prod'?StyleTokens.color.success:env==='nonprod'?StyleTokens.color.warn:StyleTokens.color.danger;
     parts.push(`<g transform="translate(${Math.min(380,width*0.27)},-2)"><rect rx="10" ry="10" x="0" y="0" height="18" width="${env.length*8+20}" fill="${color}"/><text x="10" y="9" dominant-baseline="middle" style="font:${StyleTokens.type.badge}; fill:#0A0E1A; text-transform:uppercase; letter-spacing:.08em;">${esc(env)}</text></g>`);
   }
   parts.push(`</g>`);
 
   // Lanes
-  for(const l of lanes){ const ly=laneMap.get(l.id).y;
+  for(const l of lanes){
+    const ly = laneMap.get(l.id).y;
     parts.push(`<rect class="lane" x="${laneGap}" y="${ly}" width="${width-laneGap*2}" height="${laneH}" rx="8"/>`);
     parts.push(`<text class="title" x="${laneGap+lanePadding}" y="${ly+10}" style="font:${StyleTokens.type.title}; text-transform:uppercase; letter-spacing:.08em;">${esc(l.title)}</text>`);
   }
 
-  const nodeBy = new Map(); for(const n of data.nodes||[]) nodeBy.set(n.id,n);
+  const nodeBy = new Map();
+  for(const n of (data.nodes||[])) nodeBy.set(n.id,n);
 
   // Edges (under nodes)
-  for(const e of data.edges||[]){ const a=nodeBy.get(e.from), b=nodeBy.get(e.to); if(!a||!b) continue;
-    const path = manhattanPath(a,b); const dashed = e.style==='dashed';
+  for(const e of (data.edges||[])){
+    const a=nodeBy.get(e.from), b=nodeBy.get(e.to); if(!a||!b) continue;
+    const path = manhattanPath(a,b);
+    const dashed = e.style==='dashed';
     parts.push(`<path class="edge${dashed?' edge-dashed':''}" d="${path}" marker-end="url(#arrow)"/>`);
-    if(e.label){ const m=midpoint(path); parts.push(`<text x="${m.x}" y="${m.y-4}" text-anchor="middle" style="font:${StyleTokens.type.nodeSub}; fill:${StyleTokens.color.muted};">${esc(e.label)}</text>`); }
+    if(e.label){
+      const m = midpoint(path);
+      parts.push(`<text x="${m.x}" y="${m.y-4}" text-anchor="middle" style="font:${StyleTokens.type.nodeSub}; fill:${StyleTokens.color.muted};">${esc(e.label)}</text>`);
+    }
   }
 
   // Nodes
-  for(const n of data.nodes||[]){ const ly=(laneMap.get(n.lane)?.y)||laneGap; const nx=n.x, ny=ly+n.y;
+  for(const n of (data.nodes||[])){
+    const ly = (laneMap.get(n.lane)?.y) ?? laneGap;
+    const nx = n.x, ny = ly + n.y;
     parts.push(`<g data-node="${esc(n.id)}" transform="translate(${nx},${ny})">`);
     parts.push(`<rect class="node" x="0" y="0" width="${n.w}" height="${n.h}" rx="${StyleTokens.geom.nodeRadius}"/>`);
     const icon = n.icon || iconForKind(n.kind);
@@ -110,10 +133,12 @@ export function renderAvevaArch(data, opts={}){
   }
 
   // Notes
-  for(const note of data.notes||[]){ const ly = note.lane ? (laneMap.get(note.lane)?.y||laneGap) : 0;
+  for(const note of (data.notes||[])){
+    const ly = note.lane ? ((laneMap.get(note.lane)?.y) ?? laneGap) : 0;
     parts.push(`<text x="${laneGap+note.x}" y="${ly+note.y}" style="font:${StyleTokens.type.nodeSub}; fill:${StyleTokens.color.muted};">${esc(note.text)}</text>`);
   }
 
-  parts.push(`</svg>`); return parts.join('');
+  parts.push(`</svg>`);
+  return parts.join('');
 }
 // AVEVA_RENDERER_END
