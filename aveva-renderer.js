@@ -20,10 +20,21 @@ function esc(s){ return (s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').repla
 
 // --- Parsing helpers ---
 export function extractAvevaBlock(text){
-  const re = /```aveva-arch\n([\s\S]*?)\n```/m;
-  const m = text.match(re);
-  if(!m) throw new Error('No ```aveva-arch fenced block found.');
-  return m[1];
+  // Try explicit aveva-arch fence
+  let m = text.match(/```aveva-arch\s*([\s\S]*?)\s*```/m);
+  if (m) return m[1];
+
+  // Accept generic ```json fences too
+  m = text.match(/```json\s*([\s\S]*?)\s*```/m);
+  if (m) return m[1];
+
+  // Fallback: if the whole thing looks like JSON, use it directly
+  const t = (text || '').trim();
+  if (t.startsWith('{') && t.endsWith('}')) return t;
+
+  throw new Error('No ```aveva-arch fenced block found.');
+}
+
 }
 
 export function parseAvevaArch(block){ // JSON-only to avoid extra deps
