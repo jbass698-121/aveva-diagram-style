@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>AVEVA Architecture Renderer — Demo (Tolerant)</title>
+  <title>AVEVA Architecture Renderer — Demo (Auto‑layout)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     body{font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0b1020;color:#e7ecf4;margin:0}
@@ -20,13 +20,14 @@
     .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .ok{color:#4fd1a1;font-weight:700}.err{color:#ff6b6b;font-weight:700}
     @media (max-width: 980px){.wrap{grid-template-columns:1fr}}
+    label.inline{display:inline-flex;align-items:center;gap:6px;user-select:none}
   </style>
 </head>
 <body>
   <header>
     <div class="row" style="justify-content:space-between">
       <div><strong>AVEVA Architecture Renderer — Demo</strong></div>
-      <div class="small">Accepts `aveva-arch` fence, `json` fence, or raw JSON</div>
+      <div class="small">Accepts `aveva-arch` fence, `json` fence, or raw JSON • Auto‑layout on by default</div>
     </div>
   </header>
 
@@ -44,9 +45,10 @@
       <div class="row" style="margin-top:10px">
         <button class="secondary" id="btnSample">Load sample</button>
         <button id="btnWrap">Wrap as `aveva-arch`</button>
+        <label class="inline"><input type="checkbox" id="chkAuto" checked />Use auto‑layout</label>
         <button id="btnRender" disabled>Render</button>
       </div>
-      <p class="small">Tip: If your Space returns raw JSON, click **Wrap** to fence it automatically.</p>
+      <p class="small">Tip: If your Space returns raw JSON, click **Wrap** to fence it. Auto‑layout arranges nodes left→right based on dependencies.</p>
     </div>
 
     <div class="card">
@@ -67,7 +69,6 @@
         const resp = await fetch(url, { cache: 'no-cache' });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const code = await resp.text();
-        console.log('[JS first 200 chars]', code.slice(0, 200));
         const blob = new Blob([code], { type: 'text/javascript' });
         const mod = await import(URL.createObjectURL(blob));
         AVEVA = mod; window.AVEVA = mod;
@@ -80,27 +81,26 @@
     }
 
     function loadSample(){
-      // Build correct fenced sample without escaping backticks
       const sample = [
         '```aveva-arch',
         '{',
         '  "version": 1,',
-        '  "metadata": {"title": "Example AVEVA Architecture", "subtitle": "Edge → SCADA → Historian → Cloud", "env": "prod"},',
+        '  "metadata": {"title": "AVEVA Reference", "subtitle": "Edge → Control → Cloud", "env": "prod"},',
         '  "lanes": [',
-        '    {"id": "l1", "title": "Plant Network"},',
-        '    {"id": "l2", "title": "Control Network"},',
-        '    {"id": "l3", "title": "Enterprise / Cloud"}',
+        '    {"id": "l1", "title": "Plant"},',
+        '    {"id": "l2", "title": "Control"},',
+        '    {"id": "l3", "title": "Cloud"}',
         '  ],',
         '  "nodes": [',
-        '    {"id": "n1", "lane": "l1", "kind": "edge", "title": "AVEVA Edge HMI", "sub": "PLC Cell A", "x": 80, "y": 80, "w": 220, "h": 80},',
-        '    {"id": "n2", "lane": "l2", "kind": "app", "title": "System Platform", "sub": "GR / OMI", "x": 380, "y": 70, "w": 280, "h": 100},',
-        '    {"id": "n3", "lane": "l2", "kind": "database", "title": "AVEVA Historian", "sub": "Primary", "x": 720, "y": 80, "w": 220, "h": 80},',
-        '    {"id": "n4", "lane": "l3", "kind": "cloud", "title": "AVEVA Data Hub", "sub": "Insights & API", "x": 1040, "y": 60, "w": 260, "h": 110}',
+        '    {"id": "n1", "lane": "l1", "kind": "edge", "title": "AVEVA Edge HMI"},',
+        '    {"id": "n2", "lane": "l2", "kind": "app", "title": "System Platform", "sub": "GR/OMI"},',
+        '    {"id": "n3", "lane": "l2", "kind": "database", "title": "AVEVA Historian", "sub": "Primary"},',
+        '    {"id": "n4", "lane": "l3", "kind": "cloud", "title": "AVEVA Data Hub", "sub": "Insights/API"}',
         '  ],',
         '  "edges": [',
         '    {"from": "n1", "to": "n2", "style": "solid", "label": "OPC UA"},',
-        '    {"from": "n2", "to": "n3", "style": "solid", "label": "Historian Protocol"},',
-        '    {"from": "n3", "to": "n4", "style": "dashed", "label": "HTTPS (Outbound)"}',
+        '    {"from": "n2", "to": "n3", "style": "solid", "label": "Historian"},',
+        '    {"from": "n3", "to": "n4", "style": "dashed", "label": "HTTPS"}',
         '  ]',
         '}',
         '```'
@@ -111,30 +111,27 @@
     function wrapFence(){
       const el = $('llmText');
       const v = el.value.trim();
-      if (v.startsWith('```')) return; // already fenced
-      try {
-        const pretty = JSON.stringify(JSON.parse(v), null, 2);
-        el.value = '```aveva-arch\n' + pretty + '\n```';
-      } catch {
-        alert('Paste valid JSON first.');
-      }
+      if (v.startsWith('```')) return;
+      try { el.value = '```aveva-arch\n' + JSON.stringify(JSON.parse(v), null, 2) + '\n```'; }
+      catch { alert('Paste valid JSON first.'); }
     }
 
     function render(){
       try{
         if(!AVEVA) throw new Error('Renderer not loaded yet.');
         const text = $('llmText').value.trim();
+        const useAuto = $('chkAuto').checked;
 
         if (/```/.test(text)) {
-          // Let module handle fenced content
-          const svg = AVEVA.renderFromLLM(text, { width: 1400, height: 720 });
+          // Let module parse the fence
+          const data = AVEVA.parseAvevaArch(AVEVA.extractAvevaBlock(text));
+          const svg = AVEVA.renderAvevaArch(data, { width: 1400, height: 720, autolayout: useAuto });
           $('arch').innerHTML = svg;
           return;
         }
         if (text.startsWith('{')) {
-          // Plain JSON fallback
           const data = JSON.parse(text);
-          const svg = AVEVA.renderAvevaArch(data, { width: 1400, height: 720 });
+          const svg = AVEVA.renderAvevaArch(data, { width: 1400, height: 720, autolayout: useAuto });
           $('arch').innerHTML = svg;
           return;
         }
@@ -145,11 +142,7 @@
       }
     }
 
-    // URL hash prefill (optional)
-    (function(){
-      const m = location.hash.match(/#llm=(.*)$/);
-      if(m){ try{ $('llmText').value = decodeURIComponent(m[1]); }catch{} }
-    })();
+    (function(){ const m = location.hash.match(/#llm=(.*)$/); if(m){ try{ $('llmText').value = decodeURIComponent(m[1]); }catch{} } })();
 
     $('btnLoad').addEventListener('click', loadRenderer);
     $('btnSample').addEventListener('click', loadSample);
