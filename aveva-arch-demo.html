@@ -1,236 +1,255 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>AVEVA Architecture Renderer — Demo (v1.9.1)</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8"/>
+  <title>AVEVA Architecture Renderer – Professional Demo</title>
+
   <style>
-    body{font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0b1020;color:#e7ecf4;margin:0}
-    header{padding:14px 18px;border-bottom:1px solid #1f2742;background:#0e1220;position:sticky;top:0;z-index:10}
-    .wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 18px}
-    .card{background:#141a2a;border:1px solid #1f2742;border-radius:12px;padding:14px;position:relative}
-    .label{font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:12px;opacity:.9}
-    textarea{width:100%;height:320px;background:#0e1220;color:#e7ecf4;border:1px solid #1f2742;border-radius:10px;padding:10px;resize:vertical}
-    input[type="text"], input[type="number"]{background:#0e1220;color:#e7ecf4;border:1px solid #1f2742;border-radius:10px;padding:10px}
-    input[type="text"]{width:100%}
-    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    button{background:#5cc8f6;color:#0a0e1a;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
-    button.secondary{background:#9de2d5}
-    button.ghost{background:#1f2742;color:#e7ecf4}
-    button:disabled{opacity:.5;cursor:not-allowed}
-    #arch{background:#0e1220;border:1px solid #1f2742;border-radius:12px;padding:10px;min-height:380px;display:flex;align-items:center;justify-content:center}
-    .small{color:#93a1b5;font-size:12px}
-    label.inline{display:inline-flex;align-items:center;gap:6px;user-select:none}
-    @media (max-width: 980px){.wrap{grid-template-columns:1fr}}
-    .ok{color:#4fd1a1;font-weight:700}.err{color:#ff6b6b;font-weight:700}
-    /* sticky export toolbar in right panel */
-    .toolbar{position:sticky;top:8px;z-index:5;background:#141a2a;border-radius:10px;padding:6px 8px;border:1px solid #1f2742;display:flex;gap:8px;align-items:center}
+    body {
+      font: 14px/1.4 system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      background: #f8fafc;
+    }
+    
+    header {
+      background: linear-gradient(135deg, #0e1220 0%, #1a2332 100%);
+      color: #fff;
+      padding: 16px 24px;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .header-title {
+      font-size: 20px;
+      margin: 0;
+    }
+    
+    .header-subtitle {
+      font-size: 14px;
+      opacity: 0.8;
+      margin: 4px 0 0 0;
+    }
+    
+    #controls {
+      padding: 24px;
+      background: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #374151;
+    }
+    
+    textarea {
+      width: 100%;
+      height: 140px;
+      font: 13px/1.4 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      resize: vertical;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px;
+      background: #f8fafc;
+      transition: border-color 0.2s;
+    }
+    
+    textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+      background: #ffffff;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    
+    button {
+      padding: 10px 20px;
+      font-weight: 600;
+      border: 2px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      color: white;
+      border-color: #1d4ed8;
+    }
+    
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    
+    .btn-download {
+      background: #f8fafc;
+      color: #374151;
+      border-color: #d1d5db;
+    }
+    
+    .btn-download:hover {
+      background: #f3f4f6;
+      border-color: #9ca3af;
+      transform: translateY(-1px);
+    }
+    
+    .btn-download:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    #svg-container {
+      overflow: auto;
+      padding: 24px;
+      background: #ffffff;
+      margin: 0;
+    }
+    
+    #svg-container svg {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: #ffffff;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      max-width: 100%;
+      height: auto;
+    }
+    
+    .example-text {
+      font-size: 12px;
+      color: #6b7280;
+      font-style: italic;
+      margin-bottom: 8px;
+    }
+    
+    .download-section {
+      background: #f8fafc;
+      padding: 16px 24px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    .download-title {
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #374151;
+    }
   </style>
 </head>
+
 <body>
   <header>
-    <div class="row" style="justify-content:space-between">
-      <div><strong>AVEVA Architecture Renderer — Demo</strong> <span class="small">v1.9.1</span></div>
-      <div class="small">Accepts <code>aveva-arch</code> fence, <code>json</code> fence, or raw JSON • Auto-layout ON by default</div>
-    </div>
+    <h1 class="header-title">AVEVA Architecture Renderer</h1>
+    <p class="header-subtitle">Professional architecture diagram generator with natural language processing</p>
   </header>
 
-  <div class="wrap">
-    <div class="card">
-      <div class="label">Renderer Source (.js Raw URL)</div>
-      <input id="jsUrl" type="text" value="https://raw.githubusercontent.com/jbass698-121/aveva-diagram-style/main/aveva-renderer.js" />
-      <div class="row" style="margin-top:10px">
-        <button id="btnLoad">Load renderer</button>
-        <span id="status" class="small"></span>
-      </div>
-
-      <hr style="border:0;border-top:1px solid #1f2742;margin:14px 0" />
-
-      <div class="label">LLM Response (paste Perplexity output)</div>
-      <textarea id="llmText" placeholder="Paste a single fenced ```aveva-arch``` block, a ```json``` block, or plain JSON..."></textarea>
-
-      <div class="row" style="margin-top:10px">
-        <button class="secondary" id="btnSampleAuto">Load sample (auto)</button>
-        <button class="secondary" id="btnSamplePinned">Load sample (pinned)</button>
-        <button id="btnWrap">Wrap as `aveva-arch`</button>
-        <button class="ghost" id="btnConvert">Convert to schema</button>
-      </div>
-
-      <div class="row" style="margin-top:10px">
-        <label class="inline"><input type="checkbox" id="chkAuto" checked />Use auto-layout</label>
-        <span class="small">Canvas:</span>
-        <input id="w" type="number" value="1400" min="800" step="20" style="width:110px" />
-        <input id="h" type="number" value="960"  min="600" step="20" style="width:110px" />
-        <button id="btnRender" class="ghost" disabled>Render</button>
-      </div>
-
-      <p class="small">If Perplexity returns a different schema (zones/lan/components), click <strong>Convert to schema</strong> first.</p>
+  <div id="controls">
+    <label for="user-input">Architecture Description:</label>
+    <div class="example-text">
+      Try describing your architecture in plain English, or paste structured JSON data
     </div>
-
-    <div class="card">
-      <div class="toolbar">
-        <span class="small">Export:</span>
-        <button id="btnSvg" class="ghost" disabled>Download SVG</button>
-        <button id="btnPng" class="ghost" disabled>Download PNG</button>
-        <button id="btnJpg" class="ghost" disabled>Download JPG</button>
-        <label class="inline small">Scale <input id="scale" type="number" value="2" min="1" max="4" step="0.5" style="width:70px"/></label>
-      </div>
-      <div class="label" style="margin-top:8px">Rendered SVG</div>
-      <div id="arch">No SVG yet. Load renderer → paste output → Convert (if needed) → Render.</div>
+    <textarea id="user-input" placeholder="Example: 'We have a web application with a load balancer, two web servers, and a database. Users connect through browsers in a DMZ network.'">We have analytics clients and RDS clients for future expansion. There's a historian in the perimeter network. Engineering clients connect through a secured process LAN. The supervisory network has IO servers for primary and secondary operations. Device communication includes safety systems, LOFS, CGSS, RPOP, and LHFS components.</textarea>
+    
+    <div class="button-group">
+      <button id="render-btn" class="btn-primary">🎨 Generate Architecture Diagram</button>
     </div>
   </div>
 
-  <script>
-    const $ = (id) => document.getElementById(id);
-    let AVEVA = null;
-    let lastSvg = '';
+  <div class="download-section">
+    <div class="download-title">📥 Export Options</div>
+    <div class="button-group">
+      <button id="download-svg" class="btn-download" disabled>
+        📄 Download SVG
+      </button>
+      <button id="download-png" class="btn-download" disabled>
+        🖼️ Download PNG
+      </button>
+      <button id="download-jpg" class="btn-download" disabled>
+        📸 Download JPG
+      </button>
+    </div>
+  </div>
 
-    async function loadRenderer(){
-      const url = $('jsUrl').value.trim();
-      const statusEl = $('status');
-      statusEl.textContent = 'Loading...';
+  <div id="svg-container">
+    <div style="text-align: center; padding: 60px; color: #9ca3af;">
+      <div style="font-size: 24px; margin-bottom: 8px;">🏗️</div>
+      <div>Your architecture diagram will appear here</div>
+      <div style="font-size: 12px; margin-top: 8px;">Click "Generate Architecture Diagram" to start</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { renderAvevaArch, downloadSvg, downloadPng, downloadJpg } from './aveva-renderer.js';
+    import { convertNaturalLanguageToJSON } from './nlp-to-json.js';
+
+    let currentSvgString = null;
+
+    function handleUserInput(raw) {
       try {
-        const resp = await fetch(url, { cache: 'no-cache' });
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        const code = await resp.text();
-        const blob = new Blob([code], { type: 'text/javascript' });
-        const mod = await import(URL.createObjectURL(blob));
-        AVEVA = mod; window.AVEVA = mod;
-        statusEl.innerHTML = '<span class="ok">Renderer loaded</span>';
-        $('btnRender').disabled = false;
-      } catch (e) {
-        statusEl.innerHTML = '<span class="err">Load failed:</span> ' + e.message;
-        console.error(e);
+        const jsonData = convertNaturalLanguageToJSON(raw.trim());
+        const svgString = renderAvevaArch(jsonData, {
+          width: 1400,
+          height: 1000
+        });
+        
+        document.getElementById('svg-container').innerHTML = svgString;
+        currentSvgString = svgString;
+        
+        // Enable download buttons
+        document.getElementById('download-svg').disabled = false;
+        document.getElementById('download-png').disabled = false;
+        document.getElementById('download-jpg').disabled = false;
+        
+      } catch (error) {
+        console.error('Rendering failed:', error);
+        alert('Unable to parse input. Please check your architecture description or JSON format.');
       }
     }
 
-    function wrapFence(){
-      const el = $('llmText'); const v = el.value.trim();
-      if (v.startsWith('```')) return;
-      try { el.value = '```aveva-arch\\n' + JSON.stringify(JSON.parse(v), null, 2) + '\\n```'; }
-      catch { alert('Paste valid JSON first.'); }
-    }
-    function convertToSchema(){
-      try{
-        if(!AVEVA) throw new Error('Renderer not loaded.');
-        const text = $('llmText').value.trim();
-        const obj = text.startsWith('```') ? AVEVA.parseAvevaArch(AVEVA.extractAvevaBlock(text))
-                                           : JSON.parse(text);
-        const coerced = AVEVA.coerceToSchema(obj);
-        $('llmText').value = '```aveva-arch\\n' + JSON.stringify(coerced, null, 2) + '\\n```';
-        $('arch').innerHTML = '<span class="ok">Converted to canonical schema.</span>';
-      }catch(e){
-        $('arch').innerHTML = '<span class="err">Convert error:</span> ' + e.message;
-        console.error(e);
+    // Event listeners
+    document.getElementById('render-btn').addEventListener('click', () => {
+      const text = document.getElementById('user-input').value;
+      handleUserInput(text);
+    });
+
+    document.getElementById('download-svg').addEventListener('click', () => {
+      if (currentSvgString) {
+        downloadSvg(currentSvgString, 'architecture-diagram.svg');
       }
-    }
-    function render(){
-      try{
-        if(!AVEVA) throw new Error('Renderer not loaded yet.');
-        const text = $('llmText').value.trim();
-        const useAuto = $('chkAuto').checked;
-        const width = parseInt($('w').value, 10) || 1400;
-        const height = parseInt($('h').value, 10) || 960;
+    });
 
-        const data = text.startsWith('```')
-          ? AVEVA.coerceToSchema(AVEVA.parseAvevaArch(AVEVA.extractAvevaBlock(text)))
-          : AVEVA.coerceToSchema(JSON.parse(text));
-
-        const svg = AVEVA.renderAvevaArch(data, { width, height, autolayout: useAuto });
-        lastSvg = svg;
-        $('arch').innerHTML = svg;
-        $('btnSvg').disabled = false;
-        $('btnPng').disabled = false;
-        $('btnJpg').disabled = false;
-      }catch(e){
-        $('arch').innerHTML = '<span class="err">Render error:</span> ' + e.message;
-        console.error(e);
+    document.getElementById('download-png').addEventListener('click', async () => {
+      if (currentSvgString) {
+        await downloadPng(currentSvgString, 'architecture-diagram.png', {
+          scale: 2,
+          background: '#ffffff'
+        });
       }
-    }
-    function downloadSvg(){ if(lastSvg) AVEVA.downloadSvg(lastSvg, 'architecture.svg'); }
-    async function downloadPng(){ if(lastSvg){ const s = Math.max(1, parseFloat($('scale').value) || 2); await AVEVA.downloadPng(lastSvg, 'architecture.png', { scale: s }); } }
-    async function downloadJpg(){ if(lastSvg){ const s = Math.max(1, parseFloat($('scale').value) || 2); await AVEVA.downloadJpg(lastSvg, 'architecture.jpg', { scale: s, background: '#0B1020' }); } }
+    });
 
-    function loadSampleAuto(){
-      const s = [
-        '```aveva-arch',
-        '{',
-        '  "version": 1,',
-        '  "metadata": {"title": "AVEVA System Platform Architecture (Test)", "subtitle": "Redundant SCADA + Historian + Cloud", "env": "prod"},',
-        '  "lanes": [',
-        '    { "id": "ops", "title": "Operations LAN" },',
-        '    { "id": "biz", "title": "Business LAN" },',
-        '    { "id": "cloud", "title": "Cloud" }',
-        '  ],',
-        '  "nodes": [',
-        '    { "id": "gr", "lane": "ops", "kind": "database", "title": "Galaxy Repository" },',
-        '    { "id": "aos_a", "lane": "ops", "kind": "app", "title": "Object Server A", "sub": "Primary" },',
-        '    { "id": "aos_b", "lane": "ops", "kind": "app", "title": "Object Server B", "sub": "Standby" },',
-        '    { "id": "omi_a", "lane": "ops", "kind": "app", "title": "OMI Server A" },',
-        '    { "id": "omi_b", "lane": "ops", "kind": "app", "title": "OMI Server B" },',
-        '    { "id": "web", "lane": "ops", "kind": "edge", "title": "Web Clients" },',
-        '    { "id": "hist", "lane": "biz", "kind": "database", "title": "AVEVA Historian" },',
-        '    { "id": "pi", "lane": "biz", "kind": "database", "title": "AVEVA PI Server" },',
-        '    { "id": "connect", "lane": "cloud", "kind": "cloud", "title": "AVEVA CONNECT" }',
-        '  ],',
-        '  "edges": [',
-        '    { "from": "gr", "to": "aos_a", "style": "solid", "label": "Config/GRAccess" },',
-        '    { "from": "gr", "to": "aos_b", "style": "solid", "label": "Config/GRAccess" },',
-        '    { "from": "aos_a", "to": "omi_a", "style": "solid", "label": "Orchestration" },',
-        '    { "from": "aos_b", "to": "omi_b", "style": "solid", "label": "Orchestration" },',
-        '    { "from": "omi_a", "to": "web", "style": "solid", "label": "HTTPS" },',
-        '    { "from": "omi_b", "to": "web", "style": "solid", "label": "HTTPS" },',
-        '    { "from": "aos_a", "to": "hist", "style": "solid", "label": "Process Data" },',
-        '    { "from": "aos_b", "to": "hist", "style": "solid", "label": "Process Data" },',
-        '    { "from": "hist", "to": "pi", "style": "solid", "label": "Data Feed" },',
-        '    { "from": "pi", "to": "connect", "style": "solid", "label": "Secure Connector" },',
-        '    { "from": "aos_a", "to": "aos_b", "style": "dashed", "label": "RMC Redundancy" },',
-        '    { "from": "omi_a", "to": "omi_b", "style": "dashed", "label": "Redundancy" }',
-        '  ]',
-        '}',
-        '```'
-      ].join('\\n');
-      $('llmText').value = s;
-      $('chkAuto').checked = true;
-    }
-    function loadSamplePinned(){
-      const s = [
-        '```json',
-        '{',
-        '  "lan": [',
-        '    { "name": "Operations LAN", "components": [',
-        '      { "type": "Galaxy Repository", "name": "GR" },',
-        '      { "type": "Object Server", "instances": [{"name":"AOS_A"},{"name":"AOS_B"}] },',
-        '      { "type": "OMI Visualization Server", "instances": [{"name":"OMI_A"},{"name":"OMI_B"}] }',
-        '    ]},',
-        '    { "name": "Business LAN", "components": [ { "type": "AVEVA PI Server", "name": "PI" } ] },',
-        '    { "name": "Cloud", "components": [ { "type": "AVEVA CONNECT", "name": "CONNECT" } ] }',
-        '  ],',
-        '  "connections": [',
-        '    { "from": "gr", "to": "aos_a", "label": "Config" },',
-        '    { "from": "gr", "to": "aos_b", "label": "Config" },',
-        '    { "from": "aos_a", "to": "omi_a", "label": "Real-time" },',
-        '    { "from": "aos_b", "to": "omi_b", "label": "Real-time" },',
-        '    { "from": "aos_a", "to": "pi", "label": "Data" },',
-        '    { "from": "aos_b", "to": "pi", "label": "Data" },',
-        '    { "from": "pi", "to": "connect", "label": "Secure Connector" }',
-        '  ]',
-        '}',
-        '```'
-      ].join('\\n');
-      $('llmText').value = s;
-      $('chkAuto').checked = true;
-    }
+    document.getElementById('download-jpg').addEventListener('click', async () => {
+      if (currentSvgString) {
+        await downloadJpg(currentSvgString, 'architecture-diagram.jpg', {
+          scale: 2,
+          quality: 0.95,
+          background: '#ffffff'
+        });
+      }
+    });
 
-    $('btnLoad').addEventListener('click', loadRenderer);
-    $('btnWrap').addEventListener('click', wrapFence);
-    $('btnConvert').addEventListener('click', convertToSchema);
-    $('btnRender').addEventListener('click', render);
-    $('btnSampleAuto').addEventListener('click', loadSampleAuto);
-    $('btnSamplePinned').addEventListener('click', loadSamplePinned);
-    $('btnSvg').addEventListener('click', downloadSvg);
-    $('btnPng').addEventListener('click', downloadPng);
-    $('btnJpg').addEventListener('click', downloadJpg);
+    // Auto-render on load
+    window.addEventListener('load', () => {
+      handleUserInput(document.getElementById('user-input').value);
+    });
   </script>
 </body>
 </html>
