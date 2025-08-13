@@ -155,6 +155,21 @@ function render(){
     $('btnSample').addEventListener('click', loadSample);
     $('btnRender').addEventListener('click', render);
   </script>
+<button id="btnWrap">Wrap as `aveva-arch`</button>
+<script>
+document.getElementById('btnWrap').addEventListener('click', () => {
+  const el = document.getElementById('llmText');
+  const v = el.value.trim();
+  if (v.startsWith('```')) return;              // already fenced
+  if (v.startsWith('{') && v.endsWith('}')) {
+    el.value = '```aveva-arch\n' + v + '\n```';
+  } else {
+    alert('Paste valid JSON first.');
+  }
+});
+</script>
+
 </body>
 </html>
+
 
