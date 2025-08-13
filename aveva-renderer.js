@@ -19,20 +19,25 @@ export const StyleTokens = {
 function esc(s){ return (s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 // --- Parsing helpers ---
+// Replace the whole function with this:
 export function extractAvevaBlock(text){
-  // Try explicit aveva-arch fence
+  if (!text) throw new Error('Empty input');
+
+  // Prefer explicit aveva-arch fence
   let m = text.match(/```aveva-arch\s*([\s\S]*?)\s*```/m);
   if (m) return m[1];
 
-  // Accept generic ```json fences too
+  // Also accept generic JSON fences
   m = text.match(/```json\s*([\s\S]*?)\s*```/m);
   if (m) return m[1];
 
-  // Fallback: if the whole thing looks like JSON, use it directly
-  const t = (text || '').trim();
+  // Fallback: if the whole string looks like JSON, use it directly
+  const t = String(text).trim();
   if (t.startsWith('{') && t.endsWith('}')) return t;
 
   throw new Error('No ```aveva-arch fenced block found.');
+}
+
 }
 
 }
