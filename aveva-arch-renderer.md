@@ -1,3 +1,9 @@
+```javascript
+// AVEVA_RENDERER_START
+... (module code) ...
+// AVEVA_RENDERER_END
+```
+
 // AVEVA_RENDERER_START
 // AVEVA Architecture Micro SVG Renderer — v1.0 (ESM)
 // Public API: StyleTokens, extractAvevaBlock, parseAvevaArch, renderAvevaArch, renderFromLLM
@@ -142,3 +148,4 @@ export function renderAvevaArch(data, opts={}){
   return parts.join('');
 }
 // AVEVA_RENDERER_END
+
