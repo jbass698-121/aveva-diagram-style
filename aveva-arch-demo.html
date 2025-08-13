@@ -113,15 +113,35 @@
       $('llmText').value = sample;
     }
 
-    function render(){
-      try{
-        if(!AVEVA) throw new Error('Renderer not loaded yet.');
-        const text = $('llmText').value;
-        const svg = AVEVA.renderFromLLM(text, { width: 1400, height: 720 });
-        $('arch').innerHTML = svg;
-      }catch(e){
-        $('arch').innerHTML = '<span class="err">Render error:</span> ' + e.message;
-        console.error(e);
+    <script>
+function render(){
+  try{
+    if(!AVEVA) throw new Error('Renderer not loaded yet.');
+    const text = document.getElementById('llmText').value.trim();
+
+    // If the text contains fences, let the module parse it
+    if (/```/.test(text)) {
+      const svg = AVEVA.renderFromLLM(text, { width: 1400, height: 720 });
+      document.getElementById('arch').innerHTML = svg;
+      return;
+    }
+
+    // Plain JSON fallback
+    if (text.startsWith('{')) {
+      const data = JSON.parse(text);
+      const svg = AVEVA.renderAvevaArch(data, { width: 1400, height: 720 });
+      document.getElementById('arch').innerHTML = svg;
+      return;
+    }
+
+    throw new Error('Paste either a fenced `aveva-arch` block or raw JSON.');
+  }catch(e){
+    document.getElementById('arch').innerHTML = '<span class="err">Render error:</span> ' + e.message;
+    console.error(e);
+  }
+}
+</script>
+
       }
     }
 
@@ -137,3 +157,4 @@
   </script>
 </body>
 </html>
+
