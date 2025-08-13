@@ -1,14 +1,10 @@
-// AVEVA Architecture Micro SVG Renderer — v1.8 (ESM)
+// AVEVA Architecture Micro SVG Renderer — v1.9 (ESM)
 // - Tolerant fenced-block parsing
 // - Schema coercion (zones/lan/components → canonical)
 // - Auto-layout (ranked L→R), grid-snap, safe lane-local Y clamp
 // - Fixed-size node icons (no giant loops)
+// - Edge-label collision avoidance + background pills
 // - Export helpers: downloadSvg, downloadPng, downloadJpg
-//
-// Public API:
-//   StyleTokens, extractAvevaBlock, parseAvevaArch, coerceToSchema,
-//   renderAvevaArch, renderFromLLM,
-//   svgToBlob, downloadSvg, svgToRasterDataURL, downloadPng, downloadJpg
 
 export const StyleTokens = {
   color: {
@@ -230,7 +226,7 @@ function midpoint(d){
 // ── main renderer ─────────────────────────────────────────────────────────────
 export function renderAvevaArch(input, opts = {}){
   const width = opts.width ?? 1400;
-  const height = opts.height ?? 960;          // taller default
+  const height = opts.height ?? 960;
   const laneGap = opts.laneGap ?? 16;
   const lanePadding = opts.lanePadding ?? 16;
   const useAuto = opts.autolayout !== false;  // default ON
@@ -248,11 +244,11 @@ export function renderAvevaArch(input, opts = {}){
   let ty = laneGap;
   for (const l of lanes){ laneTop.set(l.id, ty); ty += laneH + laneGap; }
 
-  // Safe lane-local Y clamp (prevents stacking)
+  // Safe lane-local Y clamp
   const padY = 16;
   for (const n of data.nodes){
     const top = laneTop.get(n.lane) ?? laneGap;
-    if ((n.y ?? 0) > laneH) n.y = n.y - top;  // convert absolute to lane-local
+    if ((n.y ?? 0) > laneH) n.y = n.y - top;     // convert absolute to lane-local
     const maxLocal = Math.max(padY, laneH - (n.h ?? 80) - padY);
     const local = (n.y ?? padY);
     n.y = Math.min(Math.max(local, padY), maxLocal);
@@ -287,6 +283,17 @@ export function renderAvevaArch(input, opts = {}){
   const nodeBy = new Map();
   for (const n of data.nodes) nodeBy.set(n.id, n);
 
+  // Edge labels — collision-aware placement
+  const labelBins = new Map();  // key = grid cell, value = count
+  const placeLabel = (x, y) => {
+    const key = `${Math.round(x/24)}:${Math.round(y/24)}`;
+    const idx = labelBins.get(key) || 0;
+    labelBins.set(key, idx + 1);
+    // offset sequence: 0, +12, -12, +24, -24, ...
+    const delta = idx === 0 ? 0 : (idx % 2 === 1 ? +12 * Math.ceil(idx/2) : -12 * Math.ceil(idx/2 - 0.5));
+    return y + delta;
+  };
+
   // Edges under nodes
   for (const e of (data.edges || [])){
     const a = nodeBy.get(e.from), b = nodeBy.get(e.to); if (!a || !b) continue;
@@ -297,7 +304,14 @@ export function renderAvevaArch(input, opts = {}){
     const d = manhattanPath(A,B);
     const dashed = e.style === 'dashed';
     parts.push(`<path class="edge${dashed?' edge-dashed':''}" d="${d}" marker-end="url(#arrow)"/>`);
-    if (e.label){ const m = midpoint(d); parts.push(`<text x="${m.x}" y="${m.y-4}" text-anchor="middle" style="font:${StyleTokens.type.nodeSub}; fill:${StyleTokens.color.muted};">${esc(e.label)}</text>`); }
+    if (e.label){
+      const m = midpoint(d);
+      const y = placeLabel(m.x, m.y - 4);
+      const label = esc(e.label);
+      const w = Math.max(28, 8 * label.length + 12), h = 14;
+      parts.push(`<rect x="${m.x - w/2}" y="${y - h + 2}" width="${w}" height="${h}" rx="6" fill="${StyleTokens.color.bg}" opacity="0.85" />`);
+      parts.push(`<text x="${m.x}" y="${y}" text-anchor="middle" style="font:${StyleTokens.type.nodeSub}; fill:${StyleTokens.color.muted};">${label}</text>`);
+    }
   }
 
   // Nodes
@@ -306,7 +320,6 @@ export function renderAvevaArch(input, opts = {}){
     parts.push(`<g data-node="${esc(n.id)}" transform="translate(${n.x},${ly})">`);
     parts.push(`<rect class="node" x="0" y="0" width="${n.w}" height="${n.h}" rx="${StyleTokens.geom.nodeRadius}"/>`);
     const icon = n.icon || iconForKind(n.kind);
-    // fixed-size icon
     parts.push(`<use href="#${icon}" x="${n.w - 22}" y="8" width="18" height="18"/>`);
     parts.push(`<text x="12" y="18" style="font:${StyleTokens.type.nodeTitle}; fill:${StyleTokens.color.text};">${esc(n.title)}</text>`);
     if (n.sub) parts.push(`<text x="12" y="36" style="font:${StyleTokens.type.nodeSub}; fill:${StyleTokens.color.muted};">${esc(n.sub)}</text>`);
