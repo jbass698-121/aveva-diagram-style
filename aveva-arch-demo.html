@@ -2,39 +2,37 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>AVEVA Architecture Renderer — Quickstart</title>
+  <title>AVEVA Architecture Renderer — Demo</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    body { font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#0b1020; color:#e7ecf4; margin:0; }
-    header { padding:16px 20px; border-bottom:1px solid #1f2742; background:#0e1220; position:sticky; top:0; }
-    .wrap { display:grid; grid-template-columns: 1fr 1fr; gap:16px; padding:16px 20px; }
-    .card { background:#141a2a; border:1px solid #1f2742; border-radius:12px; padding:14px; }
-    .label { font-weight:700; text-transform:uppercase; letter-spacing:.08em; font-size:12px; opacity:.9; }
-    textarea { width:100%; height:300px; background:#0e1220; color:#e7ecf4; border:1px solid #1f2742; border-radius:10px; padding:10px; resize:vertical; }
-    input[type="text"] { width:100%; background:#0e1220; color:#e7ecf4; border:1px solid #1f2742; border-radius:10px; padding:10px; }
-    button { background:#5cc8f6; color:#0a0e1a; border:0; border-radius:10px; padding:10px 14px; font-weight:700; cursor:pointer; }
-    button.secondary { background:#9de2d5; }
-    button:disabled { opacity:.5; cursor:not-allowed; }
-    #arch { background:#0e1220; border:1px solid #1f2742; border-radius:12px; padding:10px; min-height:360px; display:flex; align-items:center; justify-content:center; }
-    .small { color:#93a1b5; font-size:12px; }
-    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-    a { color:#5cc8f6; text-decoration:none; }
-    a:hover { text-decoration:underline; }
-    .ok { color:#4fd1a1; font-weight:700; }
-    .warn { color:#f3a33c; font-weight:700; }
-    .err { color:#ff6b6b; font-weight:700; }
+    body{font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0b1020;color:#e7ecf4;margin:0}
+    header{padding:14px 18px;border-bottom:1px solid #1f2742;background:#0e1220;position:sticky;top:0}
+    .wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 18px}
+    .card{background:#141a2a;border:1px solid #1f2742;border-radius:12px;padding:14px}
+    .label{font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:12px;opacity:.9}
+    textarea{width:100%;height:300px;background:#0e1220;color:#e7ecf4;border:1px solid #1f2742;border-radius:10px;padding:10px;resize:vertical}
+    input[type="text"]{width:100%;background:#0e1220;color:#e7ecf4;border:1px solid #1f2742;border-radius:10px;padding:10px}
+    button{background:#5cc8f6;color:#0a0e1a;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
+    button.secondary{background:#9de2d5}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    #arch{background:#0e1220;border:1px solid #1f2742;border-radius:12px;padding:10px;min-height:360px;display:flex;align-items:center;justify-content:center}
+    .small{color:#93a1b5;font-size:12px}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    a{color:#5cc8f6;text-decoration:none}
+    a:hover{text-decoration:underline}
+    .ok{color:#4fd1a1;font-weight:700}.err{color:#ff6b6b;font-weight:700}
+    @media (max-width: 980px){.wrap{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
   <header>
     <div class="row" style="justify-content:space-between">
-      <div><strong>AVEVA Architecture Renderer — Quickstart</strong></div>
-      <div class="small">Contract: model must return one fenced block labeled <code>aveva-arch</code> with <strong>JSON</strong></div>
+      <div><strong>AVEVA Architecture Renderer — Demo</strong></div>
+      <div class="small">Contract: model replies with one <code>```aveva-arch</code> JSON block</div>
     </div>
   </header>
 
   <div class="wrap">
-    <!-- Loader & Controls -->
     <div class="card">
       <div class="label">Renderer Source (.md on GitHub Raw)</div>
       <input id="mdUrl" type="text" value="https://raw.githubusercontent.com/jbass698-121/aveva-diagram-style/refs/heads/main/aveva-arch-renderer.md" />
@@ -42,60 +40,51 @@
         <button id="btnLoad">Load renderer</button>
         <span id="status" class="small"></span>
       </div>
-
       <hr style="border:0;border-top:1px solid #1f2742;margin:14px 0"/>
-
-      <div class="label">LLM Response (paste Perplexity output here)</div>
-      <textarea id="llmText" placeholder="Paste the full text response that contains a single ```aveva-arch fenced JSON block..."></textarea>
+      <div class="label">LLM Response (paste Perplexity output)</div>
+      <textarea id="llmText" placeholder="Paste the full response containing a single fenced ```aveva-arch JSON block..."></textarea>
       <div class="row" style="margin-top:10px">
-        <button class="secondary" id="btnSample">Load sample diagram</button>
+        <button class="secondary" id="btnSample">Load sample</button>
         <button id="btnRender" disabled>Render</button>
       </div>
-      <p class="small">
-        Tip: In your Space instructions, enforce: <br>
-        <code>Respond with exactly one fenced code block labeled `aveva-arch` containing JSON per the schema. No prose.</code>
+      <p class="small">Tip: Put this in your Space instructions: <br>
+        <code>Respond with exactly one fenced code block labeled `aveva-arch` containing JSON per the AVEVA schema. No additional text.</code>
       </p>
     </div>
 
-    <!-- Output -->
     <div class="card">
       <div class="label">Rendered SVG</div>
-      <div id="arch">No SVG yet. Click “Load renderer”, then “Load sample diagram”, then “Render”.</div>
+      <div id="arch">No SVG yet. Load renderer → Load sample → Render.</div>
     </div>
   </div>
 
-  <!-- Minimal loader: fetch MD, extract JS fence, dynamic import -->
+  <!-- Loader: fetch MD, extract JS fence, dynamic import -->
   <script>
     const $ = (id) => document.getElementById(id);
     let AVEVA = null;
 
-    async function loadRenderer() {
+    async function loadRenderer(){
       const url = $('mdUrl').value.trim();
       $('status').textContent = 'Loading...';
-      try {
+      try{
         const resp = await fetch(url, { cache: 'no-cache' });
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const md = await resp.text();
-
+        if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const md = await resp.text();
         const m = md.match(/```javascript\n\/\/ AVEVA_RENDERER_START\n([\s\S]*?)```/);
-        if (!m) throw new Error('Renderer code fence not found in MD (check anchors).');
-
+        if(!m) throw new Error('Renderer code fence not found in MD.');
         const blob = new Blob([m[1]], { type: 'text/javascript' });
-        const modUrl = URL.createObjectURL(blob);
-        const mod = await import(modUrl);
+        const mod = await import(URL.createObjectURL(blob));
         AVEVA = mod;
         $('status').innerHTML = '<span class="ok">Renderer loaded</span>';
         $('btnRender').disabled = false;
-      } catch (e) {
+      }catch(e){
         $('status').innerHTML = '<span class="err">Load failed:</span> ' + e.message;
         console.error(e);
       }
     }
 
-    function loadSample() {
-      const sample = String.raw`Here is your diagram:
-
-\`\`\`aveva-arch
+    function loadSample(){
+      const sample = String.raw`Here is your diagram:\n\n\`\`\`aveva-arch
 {
   "version": 1,
   "metadata": {"title": "Example AVEVA Architecture", "subtitle": "Edge → SCADA → Historian → Cloud", "env": "prod"},
@@ -116,24 +105,28 @@
     {"from": "n3", "to": "n4", "style": "dashed", "label": "HTTPS (Outbound)"}
   ]
 }
-\`\`\`
-`;
+\n\`\`\``;
       $('llmText').value = sample;
     }
 
-    function render() {
-      try {
-        if (!AVEVA) throw new Error('Renderer not loaded yet.');
+    function render(){
+      try{
+        if(!AVEVA) throw new Error('Renderer not loaded yet.');
         const text = $('llmText').value;
         const svg = AVEVA.renderFromLLM(text, { width: 1400, height: 720 });
         $('arch').innerHTML = svg;
-      } catch (e) {
+      }catch(e){
         $('arch').innerHTML = '<span class="err">Render error:</span> ' + e.message;
         console.error(e);
       }
     }
 
-    // Wire UI
+    // Optional: prefill from URL hash for bookmarklet flow
+    (function prefillFromHash(){
+      const m = location.hash.match(/#llm=(.*)$/);
+      if(m){ try{ $('llmText').value = decodeURIComponent(m[1]); }catch{ /* noop */ } }
+    })();
+
     $('btnLoad').addEventListener('click', loadRenderer);
     $('btnSample').addEventListener('click', loadSample);
     $('btnRender').addEventListener('click', render);
