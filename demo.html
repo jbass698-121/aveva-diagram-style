@@ -2,99 +2,253 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>AVEVA Architecture Renderer – Demo</title>
+  <title>AVEVA Architecture Renderer – Professional Demo</title>
 
   <style>
-    body{font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:#f5f7fa}
-    header{background:#0e1220;color:#fff;padding:12px 24px;font-weight:600}
-    #controls{padding:16px;background:#ffffff;border-bottom:1px solid #d0d5dd}
-    textarea{width:100%;height:120px;font:13px/1.4 monospace;resize:vertical}
-    button{margin-top:8px;padding:8px 14px;font-weight:600;border:1px solid #3498db;background:#5cc8f6;color:#fff;border-radius:4px;cursor:pointer}
-    button:hover{background:#3498db}
-    #svg-container{overflow:auto;padding:16px}
-    svg{border:1px solid #d0d5dd;background:#0e1220}
+    body {
+      font: 14px/1.4 system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      background: #f8fafc;
+    }
+    
+    header {
+      background: linear-gradient(135deg, #0e1220 0%, #1a2332 100%);
+      color: #fff;
+      padding: 16px 24px;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .header-title {
+      font-size: 20px;
+      margin: 0;
+    }
+    
+    .header-subtitle {
+      font-size: 14px;
+      opacity: 0.8;
+      margin: 4px 0 0 0;
+    }
+    
+    #controls {
+      padding: 24px;
+      background: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #374151;
+    }
+    
+    textarea {
+      width: 100%;
+      height: 140px;
+      font: 13px/1.4 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      resize: vertical;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px;
+      background: #f8fafc;
+      transition: border-color 0.2s;
+    }
+    
+    textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+      background: #ffffff;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    
+    button {
+      padding: 10px 20px;
+      font-weight: 600;
+      border: 2px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      color: white;
+      border-color: #1d4ed8;
+    }
+    
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    
+    .btn-download {
+      background: #f8fafc;
+      color: #374151;
+      border-color: #d1d5db;
+    }
+    
+    .btn-download:hover {
+      background: #f3f4f6;
+      border-color: #9ca3af;
+      transform: translateY(-1px);
+    }
+    
+    .btn-download:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    #svg-container {
+      overflow: auto;
+      padding: 24px;
+      background: #ffffff;
+      margin: 0;
+    }
+    
+    #svg-container svg {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: #ffffff;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      max-width: 100%;
+      height: auto;
+    }
+    
+    .example-text {
+      font-size: 12px;
+      color: #6b7280;
+      font-style: italic;
+      margin-bottom: 8px;
+    }
+    
+    .download-section {
+      background: #f8fafc;
+      padding: 16px 24px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    .download-title {
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #374151;
+    }
   </style>
 </head>
 
 <body>
-  <header>AVEVA Architecture Renderer – Interactive Demo</header>
+  <header>
+    <h1 class="header-title">AVEVA Architecture Renderer</h1>
+    <p class="header-subtitle">Professional architecture diagram generator with natural language processing</p>
+  </header>
 
   <div id="controls">
-    <label for="user-input"><strong>Paste architecture request:</strong></label>
-    <textarea id="user-input">// Try either:
-// 1. Structured JSON (as returned by Perplexity)  ➜ will be drawn directly
-// 2. Plain English description                  ➜ will be parsed & then drawn
-//
-// Example (English):
-// "We have browsers that hit a load balancer in the DMZ. It forwards
-//  traffic to two web servers, which read & write to a Postgres database
-//  in the secure zone."
-    </textarea>
-    <button id="render-btn">Render diagram</button>
+    <label for="user-input">Architecture Description:</label>
+    <div class="example-text">
+      Try describing your architecture in plain English, or paste structured JSON data
+    </div>
+    <textarea id="user-input" placeholder="Example: 'We have a web application with a load balancer, two web servers, and a database. Users connect through browsers in a DMZ network.'">We have analytics clients and RDS clients for future expansion. There's a historian in the perimeter network. Engineering clients connect through a secured process LAN. The supervisory network has IO servers for primary and secondary operations. Device communication includes safety systems, LOFS, CGSS, RPOP, and LHFS components.</textarea>
+    
+    <div class="button-group">
+      <button id="render-btn" class="btn-primary">🎨 Generate Architecture Diagram</button>
+    </div>
+  </div>
+
+  <div class="download-section">
+    <div class="download-title">📥 Export Options</div>
+    <div class="button-group">
+      <button id="download-svg" class="btn-download" disabled>
+        📄 Download SVG
+      </button>
+      <button id="download-png" class="btn-download" disabled>
+        🖼️ Download PNG
+      </button>
+      <button id="download-jpg" class="btn-download" disabled>
+        📸 Download JPG
+      </button>
+    </div>
   </div>
 
   <div id="svg-container">
-    <!-- SVG will appear here -->
+    <div style="text-align: center; padding: 60px; color: #9ca3af;">
+      <div style="font-size: 24px; margin-bottom: 8px;">🏗️</div>
+      <div>Your architecture diagram will appear here</div>
+      <div style="font-size: 12px; margin-top: 8px;">Click "Generate Architecture Diagram" to start</div>
+    </div>
   </div>
 
-  <!-- Load BOTH modules (ESM) -->
   <script type="module">
-    /* --------------------------------------------------------------------
-       1. Import the core renderer (your current file, unchanged)
-    -------------------------------------------------------------------- */
-    import { renderAvevaArch, coerceToSchema, extractAvevaBlock,
-             parseAvevaArch } from './aveva-renderer.js';
-
-    /* --------------------------------------------------------------------
-       2. Import the natural-language extension (adds renderFromNaturalLanguage)
-    -------------------------------------------------------------------- */
+    import { renderAvevaArch, coerceToSchema, extractAvevaBlock, parseAvevaArch, downloadSvg, downloadPng, downloadJpg } from './aveva-renderer.js';
     import { renderFromNaturalLanguage } from './aveva-nlp-extension.js';
 
-    /* --------------------------------------------------------------------
-       3. Helper: auto-detect input type and call the right renderer
-    -------------------------------------------------------------------- */
-    function handleUserInput(raw) {
-      let svgString;
+    let currentSvgString = null;
 
-      // First try natural-language parsing (the function itself will
-      // fall back to structured parsing if the text is JSON/fenced).
+    function handleUserInput(raw) {
       try {
-        svgString = renderFromNaturalLanguage(raw.trim(), {
+        const svgString = renderFromNaturalLanguage(raw.trim(), {
           width: 1400,
           height: 1000
         });
-      } catch (err) {
-        // If extension fails, fall back to original structured pipeline
-        console.warn('NLP render failed → trying structured JSON:', err.message);
-        try {
-          const data = coerceToSchema(
-            parseAvevaArch(extractAvevaBlock(raw))
-          );
-          svgString = renderAvevaArch(data, { width: 1400, height: 1000 });
-        } catch (e2) {
-          alert('Unable to parse input as natural language OR JSON.');
-          throw e2;
-        }
+        
+        document.getElementById('svg-container').innerHTML = svgString;
+        currentSvgString = svgString;
+        
+        // Enable download buttons
+        document.getElementById('download-svg').disabled = false;
+        document.getElementById('download-png').disabled = false;
+        document.getElementById('download-jpg').disabled = false;
+        
+      } catch (error) {
+        console.error('Rendering failed:', error);
+        alert('Unable to parse input. Please check your architecture description or JSON format.');
       }
-
-      // Inject SVG into the page
-      document.getElementById('svg-container').innerHTML = svgString;
     }
 
-    /* --------------------------------------------------------------------
-       4. Wire up the button
-    -------------------------------------------------------------------- */
+    // Event listeners
     document.getElementById('render-btn').addEventListener('click', () => {
       const text = document.getElementById('user-input').value;
       handleUserInput(text);
     });
 
-    /* --------------------------------------------------------------------
-       5. Expose helpers globally (optional)
-    -------------------------------------------------------------------- */
-    window.renderAvevaArch = renderAvevaArch;
-    window.renderFromNaturalLanguage = renderFromNaturalLanguage;
-    window.handleUserInput = handleUserInput;
+    document.getElementById('download-svg').addEventListener('click', () => {
+      if (currentSvgString) {
+        downloadSvg(currentSvgString, 'architecture-diagram.svg');
+      }
+    });
+
+    document.getElementById('download-png').addEventListener('click', async () => {
+      if (currentSvgString) {
+        await downloadPng(currentSvgString, 'architecture-diagram.png', {
+          scale: 2,
+          background: '#ffffff'
+        });
+      }
+    });
+
+    document.getElementById('download-jpg').addEventListener('click', async () => {
+      if (currentSvgString) {
+        await downloadJpg(currentSvgString, 'architecture-diagram.jpg', {
+          scale: 2,
+          quality: 0.95,
+          background: '#ffffff'
+        });
+      }
+    });
+
+    // Auto-render on load
+    window.addEventListener('load', () => {
+      handleUserInput(document.getElementById('user-input').value);
+    });
   </script>
 </body>
 </html>
