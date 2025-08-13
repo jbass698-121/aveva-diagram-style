@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>AVEVA Architecture Renderer — Demo (JS Module Loader)</title>
+  <title>AVEVA Architecture Renderer — Demo (Tolerant)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     body{font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0b1020;color:#e7ecf4;margin:0}
@@ -26,13 +26,13 @@
   <header>
     <div class="row" style="justify-content:space-between">
       <div><strong>AVEVA Architecture Renderer — Demo</strong></div>
-      <div class="small">Contract: model replies with one <code>```aveva-arch</code> JSON block</div>
+      <div class="small">Accepts `aveva-arch` fence, `json` fence, or raw JSON</div>
     </div>
   </header>
 
   <div class="wrap">
     <div class="card">
-      <div class="label">Renderer Source (.js on GitHub Raw)</div>
+      <div class="label">Renderer Source (.js Raw URL)</div>
       <input id="jsUrl" type="text" value="https://raw.githubusercontent.com/jbass698-121/aveva-diagram-style/main/aveva-renderer.js" />
       <div class="row" style="margin-top:10px">
         <button id="btnLoad">Load renderer</button>
@@ -40,23 +40,21 @@
       </div>
       <hr style="border:0;border-top:1px solid #1f2742;margin:14px 0"/>
       <div class="label">LLM Response (paste Perplexity output)</div>
-      <textarea id="llmText" placeholder="Paste the full response containing a single fenced ```aveva-arch JSON block..."></textarea>
+      <textarea id="llmText" placeholder="Paste a single fenced ```aveva-arch block, a ```json block, or plain JSON..."></textarea>
       <div class="row" style="margin-top:10px">
         <button class="secondary" id="btnSample">Load sample</button>
+        <button id="btnWrap">Wrap as `aveva-arch`</button>
         <button id="btnRender" disabled>Render</button>
       </div>
-      <p class="small">Space instructions (keep short): <br>
-        <code>Respond with exactly one fenced code block labeled `aveva-arch` containing JSON per the AVEVA schema. No additional text.</code>
-      </p>
+      <p class="small">Tip: If your Space returns raw JSON, click **Wrap** to fence it automatically.</p>
     </div>
 
     <div class="card">
       <div class="label">Rendered SVG</div>
-      <div id="arch">No SVG yet. Load renderer → Load sample → Render.</div>
+      <div id="arch">No SVG yet. Load renderer → paste output → Render.</div>
     </div>
   </div>
 
-  <!-- Loader: fetch .js module text, import via Blob URL -->
   <script>
     const $ = (id) => document.getElementById(id);
     let AVEVA = null;
@@ -69,13 +67,10 @@
         const resp = await fetch(url, { cache: 'no-cache' });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const code = await resp.text();
-
-        // Log a snippet to verify we fetched the right file
         console.log('[JS first 200 chars]', code.slice(0, 200));
-
         const blob = new Blob([code], { type: 'text/javascript' });
         const mod = await import(URL.createObjectURL(blob));
-        AVEVA = mod;
+        AVEVA = mod; window.AVEVA = mod;
         statusEl.innerHTML = '<span class="ok">Renderer loaded</span>';
         $('btnRender').disabled = false;
       } catch (e) {
@@ -85,91 +80,81 @@
     }
 
     function loadSample(){
-      const sample = String.raw`Here is your diagram:
-
-\`\`\`aveva-arch
-{
-  "version": 1,
-  "metadata": {"title": "Example AVEVA Architecture", "subtitle": "Edge → SCADA → Historian → Cloud", "env": "prod"},
-  "lanes": [
-    {"id": "l1", "title": "Plant Network"},
-    {"id": "l2", "title": "Control Network"},
-    {"id": "l3", "title": "Enterprise / Cloud"}
-  ],
-  "nodes": [
-    {"id": "n1", "lane": "l1", "kind": "edge", "title": "AVEVA Edge HMI", "sub": "PLC Cell A", "x": 80, "y": 80, "w": 220, "h": 80},
-    {"id": "n2", "lane": "l2", "kind": "app", "title": "System Platform", "sub": "GR / OMI", "x": 380, "y": 70, "w": 280, "h": 100},
-    {"id": "n3", "lane": "l2", "kind": "database", "title": "AVEVA Historian", "sub": "Primary", "x": 720, "y": 80, "w": 220, "h": 80},
-    {"id": "n4", "lane": "l3", "kind": "cloud", "title": "AVEVA Data Hub", "sub": "Insights & API", "x": 1040, "y": 60, "w": 260, "h": 110}
-  ],
-  "edges": [
-    {"from": "n1", "to": "n2", "style": "solid", "label": "OPC UA"},
-    {"from": "n2", "to": "n3", "style": "solid", "label": "Historian Protocol"},
-    {"from": "n3", "to": "n4", "style": "dashed", "label": "HTTPS (Outbound)"}
-  ]
-}
-\`\`\`
-`;
+      // Build correct fenced sample without escaping backticks
+      const sample = [
+        '```aveva-arch',
+        '{',
+        '  "version": 1,',
+        '  "metadata": {"title": "Example AVEVA Architecture", "subtitle": "Edge → SCADA → Historian → Cloud", "env": "prod"},',
+        '  "lanes": [',
+        '    {"id": "l1", "title": "Plant Network"},',
+        '    {"id": "l2", "title": "Control Network"},',
+        '    {"id": "l3", "title": "Enterprise / Cloud"}',
+        '  ],',
+        '  "nodes": [',
+        '    {"id": "n1", "lane": "l1", "kind": "edge", "title": "AVEVA Edge HMI", "sub": "PLC Cell A", "x": 80, "y": 80, "w": 220, "h": 80},',
+        '    {"id": "n2", "lane": "l2", "kind": "app", "title": "System Platform", "sub": "GR / OMI", "x": 380, "y": 70, "w": 280, "h": 100},',
+        '    {"id": "n3", "lane": "l2", "kind": "database", "title": "AVEVA Historian", "sub": "Primary", "x": 720, "y": 80, "w": 220, "h": 80},',
+        '    {"id": "n4", "lane": "l3", "kind": "cloud", "title": "AVEVA Data Hub", "sub": "Insights & API", "x": 1040, "y": 60, "w": 260, "h": 110}',
+        '  ],',
+        '  "edges": [',
+        '    {"from": "n1", "to": "n2", "style": "solid", "label": "OPC UA"},',
+        '    {"from": "n2", "to": "n3", "style": "solid", "label": "Historian Protocol"},',
+        '    {"from": "n3", "to": "n4", "style": "dashed", "label": "HTTPS (Outbound)"}',
+        '  ]',
+        '}',
+        '```'
+      ].join('\n');
       $('llmText').value = sample;
     }
 
-    <script>
-function render(){
-  try{
-    if(!AVEVA) throw new Error('Renderer not loaded yet.');
-    const text = document.getElementById('llmText').value.trim();
-
-    // If the text contains fences, let the module parse it
-    if (/```/.test(text)) {
-      const svg = AVEVA.renderFromLLM(text, { width: 1400, height: 720 });
-      document.getElementById('arch').innerHTML = svg;
-      return;
-    }
-
-    // Plain JSON fallback
-    if (text.startsWith('{')) {
-      const data = JSON.parse(text);
-      const svg = AVEVA.renderAvevaArch(data, { width: 1400, height: 720 });
-      document.getElementById('arch').innerHTML = svg;
-      return;
-    }
-
-    throw new Error('Paste either a fenced `aveva-arch` block or raw JSON.');
-  }catch(e){
-    document.getElementById('arch').innerHTML = '<span class="err">Render error:</span> ' + e.message;
-    console.error(e);
-  }
-}
-</script>
-
+    function wrapFence(){
+      const el = $('llmText');
+      const v = el.value.trim();
+      if (v.startsWith('```')) return; // already fenced
+      try {
+        const pretty = JSON.stringify(JSON.parse(v), null, 2);
+        el.value = '```aveva-arch\n' + pretty + '\n```';
+      } catch {
+        alert('Paste valid JSON first.');
       }
     }
 
-    // Optional: prefill from URL hash for bookmarklet flow
-    (function prefillFromHash(){
+    function render(){
+      try{
+        if(!AVEVA) throw new Error('Renderer not loaded yet.');
+        const text = $('llmText').value.trim();
+
+        if (/```/.test(text)) {
+          // Let module handle fenced content
+          const svg = AVEVA.renderFromLLM(text, { width: 1400, height: 720 });
+          $('arch').innerHTML = svg;
+          return;
+        }
+        if (text.startsWith('{')) {
+          // Plain JSON fallback
+          const data = JSON.parse(text);
+          const svg = AVEVA.renderAvevaArch(data, { width: 1400, height: 720 });
+          $('arch').innerHTML = svg;
+          return;
+        }
+        throw new Error('Paste a fenced `aveva-arch`/`json` block or raw JSON.');
+      }catch(e){
+        $('arch').innerHTML = '<span class="err">Render error:</span> ' + e.message;
+        console.error(e);
+      }
+    }
+
+    // URL hash prefill (optional)
+    (function(){
       const m = location.hash.match(/#llm=(.*)$/);
-      if(m){ try{ $('llmText').value = decodeURIComponent(m[1]); }catch{ /* noop */ } }
+      if(m){ try{ $('llmText').value = decodeURIComponent(m[1]); }catch{} }
     })();
 
     $('btnLoad').addEventListener('click', loadRenderer);
     $('btnSample').addEventListener('click', loadSample);
+    $('btnWrap').addEventListener('click', wrapFence);
     $('btnRender').addEventListener('click', render);
   </script>
-<button id="btnWrap">Wrap as `aveva-arch`</button>
-<script>
-document.getElementById('btnWrap').addEventListener('click', () => {
-  const el = document.getElementById('llmText');
-  const v = el.value.trim();
-  if (v.startsWith('```')) return;              // already fenced
-  if (v.startsWith('{') && v.endsWith('}')) {
-    el.value = '```aveva-arch\n' + v + '\n```';
-  } else {
-    alert('Paste valid JSON first.');
-  }
-});
-</script>
-
 </body>
 </html>
-
-
