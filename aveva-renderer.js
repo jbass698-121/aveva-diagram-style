@@ -1,4 +1,4 @@
-// AVEVA Architecture Micro SVG Renderer — v1.0 (ESM)
+// AVEVA Architecture Micro SVG Renderer — v1.1 (ESM, tolerant)
 // Public API: StyleTokens, extractAvevaBlock, parseAvevaArch, renderAvevaArch, renderFromLLM
 
 export const StyleTokens = {
@@ -18,33 +18,27 @@ export const StyleTokens = {
 
 function esc(s){ return (s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-// --- Parsing helpers ---
-// Replace the whole function with this:
+// --- Parsing helpers (tolerant) ---
 export function extractAvevaBlock(text){
   if (!text) throw new Error('Empty input');
-
-  // Prefer explicit aveva-arch fence
-  let m = text.match(/```aveva-arch\s*([\s\S]*?)\s*```/m);
+  // Preferred: explicit aveva-arch fence
+  let m = String(text).match(/```aveva-arch\s*([\s\S]*?)\s*```/m);
   if (m) return m[1];
-
   // Also accept generic JSON fences
-  m = text.match(/```json\s*([\s\S]*?)\s*```/m);
+  m = String(text).match(/```json\s*([\s\S]*?)\s*```/m);
   if (m) return m[1];
-
-  // Fallback: if the whole string looks like JSON, use it directly
+  // Accept unlabeled triple-backtick fences containing JSON
+  m = String(text).match(/```\s*([\s\S]*?)\s*```/m);
+  if (m && m[1].trim().startsWith('{') && m[1].trim().endsWith('}')) return m[1];
+  // Fallback: whole string is JSON
   const t = String(text).trim();
   if (t.startsWith('{') && t.endsWith('}')) return t;
-
   throw new Error('No ```aveva-arch fenced block found.');
 }
 
-}
-
-}
-
-export function parseAvevaArch(block){ // JSON-only to avoid extra deps
-  const trimmed = block.trim();
-  if(!trimmed.startsWith('{')) throw new Error('Expecting JSON inside the `aveva-arch` fence.');
+export function parseAvevaArch(block){
+  const trimmed = String(block).trim();
+  if(!trimmed.startsWith('{')) throw new Error('Expecting JSON object.');
   return JSON.parse(trimmed);
 }
 
@@ -78,7 +72,7 @@ function manhattanPath(a,b){
   return `M ${ax} ${ay} L ${mx} ${ay} L ${mx} ${by} L ${nx} ${by} L ${bx} ${by}`;
 }
 function midpoint(d){
-  const nums=(d.match(/[-\\d.]+/g)||[]).map(Number);
+  const nums=(d.match(/[-\d.]+/g)||[]).map(Number);
   const i=Math.floor(nums.length/2);
   return {x:nums[i-2]||0,y:nums[i-1]||0};
 }
@@ -96,27 +90,27 @@ export function renderAvevaArch(data, opts={}){
   for(const l of lanes){ laneMap.set(l.id,{ y, title:l.title }); y += laneH + laneGap; }
 
   const parts = [];
-  parts.push(`<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"${width}\" height=\"${height}\" viewBox=\"0 0 ${width} ${height}\">`);
+  parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`);
   parts.push(`<style>${defaultCSS()}</style><defs>${defaultDefs()}</defs>`);
-  parts.push(`<rect x=\"0\" y=\"0\" width=\"${width}\" height=\"${height}\" fill=\"${StyleTokens.color.bg}\"/>`);
+  parts.push(`<rect x="0" y="0" width="${width}" height="${height}" fill="${StyleTokens.color.bg}"/>`);
 
   const title = data.metadata?.title || 'Architecture';
   const subtitle = data.metadata?.subtitle || '';
   const env = data.metadata?.env;
-  parts.push(`<g transform=\"translate(${laneGap},${laneGap/2})\">`);
-  parts.push(`<text class=\"title\" x=\"0\" y=\"0\" dominant-baseline=\"hanging\" style=\"font:${StyleTokens.type.title}; text-transform:uppercase; letter-spacing:.08em;\">${esc(title)}</text>`);
-  if(subtitle) parts.push(`<text x=\"0\" y=\"18\" style=\"font:${StyleTokens.type.nodeSub}; fill:${StyleTokens.color.muted};\">${esc(subtitle)}</text>`);
+  parts.push(`<g transform="translate(${laneGap},${laneGap/2})">`);
+  parts.push(`<text class="title" x="0" y="0" dominant-baseline="hanging" style="font:${StyleTokens.type.title}; text-transform:uppercase; letter-spacing:.08em;">${esc(title)}</text>`);
+  if(subtitle) parts.push(`<text x="0" y="18" style="font:${StyleTokens.type.nodeSub}; fill:${StyleTokens.color.muted};">${esc(subtitle)}</text>`);
   if(env){
     const color = env==='prod'?StyleTokens.color.success:env==='nonprod'?StyleTokens.color.warn:StyleTokens.color.danger;
-    parts.push(`<g transform=\"translate(${Math.min(380,width*0.27)},-2)\"><rect rx=\"10\" ry=\"10\" x=\"0\" y=\"0\" height=\"18\" width=\"${env.length*8+20}\" fill=\"${color}\"/><text x=\"10\" y=\"9\" dominant-baseline=\"middle\" style=\"font:${StyleTokens.type.badge}; fill:#0A0E1A; text-transform:uppercase; letter-spacing:.08em;\">${esc(env)}</text></g>`);
+    parts.push(`<g transform="translate(${Math.min(380,width*0.27)},-2)"><rect rx="10" ry="10" x="0" y="0" height="18" width="${env.length*8+20}" fill="${color}"/><text x="10" y="9" dominant-baseline="middle" style="font:${StyleTokens.type.badge}; fill:#0A0E1A; text-transform:uppercase; letter-spacing:.08em;">${esc(env)}</text></g>`);
   }
   parts.push(`</g>`);
 
   // Lanes
   for(const l of lanes){
     const ly = laneMap.get(l.id).y;
-    parts.push(`<rect class=\"lane\" x=\"${laneGap}\" y=\"${ly}\" width=\"${width-laneGap*2}\" height=\"${laneH}\" rx=\"8\"/>`);
-    parts.push(`<text class=\"title\" x=\"${laneGap+lanePadding}\" y=\"${ly+10}\" style=\"font:${StyleTokens.type.title}; text-transform:uppercase; letter-spacing:.08em;\">${esc(l.title)}</text>`);
+    parts.push(`<rect class="lane" x="${laneGap}" y="${ly}" width="${width-laneGap*2}" height="${laneH}" rx="8"/>`);
+    parts.push(`<text class="title" x="${laneGap+lanePadding}" y="${ly+10}" style="font:${StyleTokens.type.title}; text-transform:uppercase; letter-spacing:.08em;">${esc(l.title)}</text>`);
   }
 
   const nodeBy = new Map();
@@ -127,10 +121,10 @@ export function renderAvevaArch(data, opts={}){
     const a=nodeBy.get(e.from), b=nodeBy.get(e.to); if(!a||!b) continue;
     const path = manhattanPath(a,b);
     const dashed = e.style==='dashed';
-    parts.push(`<path class=\"edge${dashed?' edge-dashed':''}\" d=\"${path}\" marker-end=\"url(#arrow)\"/>`);
+    parts.push(`<path class="edge${dashed?' edge-dashed':''}" d="${path}" marker-end="url(#arrow)"/>`);
     if(e.label){
       const m = midpoint(path);
-      parts.push(`<text x=\"${m.x}\" y=\"${m.y-4}\" text-anchor=\"middle\" style=\"font:${StyleTokens.type.nodeSub}; fill:${StyleTokens.color.muted};\">${esc(e.label)}</text>`);
+      parts.push(`<text x="${m.x}" y="${m.y-4}" text-anchor="middle" style="font:${StyleTokens.type.nodeSub}; fill:${StyleTokens.color.muted};">${esc(e.label)}</text>`);
     }
   }
 
@@ -138,19 +132,19 @@ export function renderAvevaArch(data, opts={}){
   for(const n of (data.nodes||[])){
     const ly = (laneMap.get(n.lane)?.y) ?? laneGap;
     const nx = n.x, ny = ly + n.y;
-    parts.push(`<g data-node=\"${esc(n.id)}\" transform=\"translate(${nx},${ny})\">`);
-    parts.push(`<rect class=\"node\" x=\"0\" y=\"0\" width=\"${n.w}\" height=\"${n.h}\" rx=\"${StyleTokens.geom.nodeRadius}\"/>`);
+    parts.push(`<g data-node="${esc(n.id)}" transform="translate(${nx},${ny})">`);
+    parts.push(`<rect class="node" x="0" y="0" width="${n.w}" height="${n.h}" rx="${StyleTokens.geom.nodeRadius}"/>`);
     const icon = n.icon || iconForKind(n.kind);
-    parts.push(`<g transform=\"translate(${n.w-28},10) scale(0.9)\"><use href=\"#${icon}\" stroke=\"${StyleTokens.color.primary}\"/></g>`);
-    parts.push(`<text x=\"12\" y=\"18\" style=\"font:${StyleTokens.type.nodeTitle}; fill:${StyleTokens.color.text};\">${esc(n.title)}</text>`);
-    if(n.sub) parts.push(`<text x=\"12\" y=\"36\" style=\"font:${StyleTokens.type.nodeSub}; fill:${StyleTokens.color.muted};\">${esc(n.sub)}</text>`);
+    parts.push(`<g transform="translate(${n.w-28},10) scale(0.9)"><use href="#${icon}" stroke="${StyleTokens.color.primary}"/></g>`);
+    parts.push(`<text x="12" y="18" style="font:${StyleTokens.type.nodeTitle}; fill:${StyleTokens.color.text};">${esc(n.title)}</text>`);
+    if(n.sub) parts.push(`<text x="12" y="36" style="font:${StyleTokens.type.nodeSub}; fill:${StyleTokens.color.muted};">${esc(n.sub)}</text>`);
     parts.push(`</g>`);
   }
 
   // Notes
   for(const note of (data.notes||[])){
     const ly = note.lane ? ((laneMap.get(note.lane)?.y) ?? laneGap) : 0;
-    parts.push(`<text x=\"${laneGap+note.x}\" y=\"${ly+note.y}\" style=\"font:${StyleTokens.type.nodeSub}; fill:${StyleTokens.color.muted};\">${esc(note.text)}</text>`);
+    parts.push(`<text x="${laneGap+note.x}" y="${ly+note.y}" style="font:${StyleTokens.type.nodeSub}; fill:${StyleTokens.color.muted};">${esc(note.text)}</text>`);
   }
 
   parts.push(`</svg>`);
