@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>AVEVA Architecture Renderer — Demo (v1.9)</title>
+  <title>AVEVA Architecture Renderer — Demo (v1.9.1)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     body{font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0b1020;color:#e7ecf4;margin:0}
-    header{padding:14px 18px;border-bottom:1px solid #1f2742;background:#0e1220;position:sticky;top:0}
+    header{padding:14px 18px;border-bottom:1px solid #1f2742;background:#0e1220;position:sticky;top:0;z-index:10}
     .wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 18px}
-    .card{background:#141a2a;border:1px solid #1f2742;border-radius:12px;padding:14px}
+    .card{background:#141a2a;border:1px solid #1f2742;border-radius:12px;padding:14px;position:relative}
     .label{font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:12px;opacity:.9}
     textarea{width:100%;height:320px;background:#0e1220;color:#e7ecf4;border:1px solid #1f2742;border-radius:10px;padding:10px;resize:vertical}
     input[type="text"], input[type="number"]{background:#0e1220;color:#e7ecf4;border:1px solid #1f2742;border-radius:10px;padding:10px}
@@ -23,12 +23,14 @@
     label.inline{display:inline-flex;align-items:center;gap:6px;user-select:none}
     @media (max-width: 980px){.wrap{grid-template-columns:1fr}}
     .ok{color:#4fd1a1;font-weight:700}.err{color:#ff6b6b;font-weight:700}
+    /* sticky export toolbar in right panel */
+    .toolbar{position:sticky;top:8px;z-index:5;background:#141a2a;border-radius:10px;padding:6px 8px;border:1px solid #1f2742;display:flex;gap:8px;align-items:center}
   </style>
 </head>
 <body>
   <header>
     <div class="row" style="justify-content:space-between">
-      <div><strong>AVEVA Architecture Renderer — Demo</strong> <span class="small">v1.9</span></div>
+      <div><strong>AVEVA Architecture Renderer — Demo</strong> <span class="small">v1.9.1</span></div>
       <div class="small">Accepts <code>aveva-arch</code> fence, <code>json</code> fence, or raw JSON • Auto-layout ON by default</div>
     </div>
   </header>
@@ -62,19 +64,18 @@
         <button id="btnRender" class="ghost" disabled>Render</button>
       </div>
 
-      <div class="row" style="margin-top:10px">
+      <p class="small">If Perplexity returns a different schema (zones/lan/components), click <strong>Convert to schema</strong> first.</p>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
         <span class="small">Export:</span>
         <button id="btnSvg" class="ghost" disabled>Download SVG</button>
         <button id="btnPng" class="ghost" disabled>Download PNG</button>
         <button id="btnJpg" class="ghost" disabled>Download JPG</button>
         <label class="inline small">Scale <input id="scale" type="number" value="2" min="1" max="4" step="0.5" style="width:70px"/></label>
       </div>
-
-      <p class="small">If Perplexity returns a different schema (zones/lan/components), click <strong>Convert to schema</strong> first. Use a higher <strong>Scale</strong> for print-quality PNG/JPG.</p>
-    </div>
-
-    <div class="card">
-      <div class="label">Rendered SVG</div>
+      <div class="label" style="margin-top:8px">Rendered SVG</div>
       <div id="arch">No SVG yet. Load renderer → paste output → Convert (if needed) → Render.</div>
     </div>
   </div>
