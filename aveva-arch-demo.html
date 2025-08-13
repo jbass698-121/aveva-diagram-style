@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>AVEVA Architecture Renderer — Demo (v1.8)</title>
+  <title>AVEVA Architecture Renderer — Demo (v1.9)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     body{font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0b1020;color:#e7ecf4;margin:0}
@@ -28,7 +28,7 @@
 <body>
   <header>
     <div class="row" style="justify-content:space-between">
-      <div><strong>AVEVA Architecture Renderer — Demo</strong> <span class="small">v1.8</span></div>
+      <div><strong>AVEVA Architecture Renderer — Demo</strong> <span class="small">v1.9</span></div>
       <div class="small">Accepts <code>aveva-arch</code> fence, <code>json</code> fence, or raw JSON • Auto-layout ON by default</div>
     </div>
   </header>
@@ -65,11 +65,12 @@
       <div class="row" style="margin-top:10px">
         <span class="small">Export:</span>
         <button id="btnSvg" class="ghost" disabled>Download SVG</button>
+        <button id="btnPng" class="ghost" disabled>Download PNG</button>
         <button id="btnJpg" class="ghost" disabled>Download JPG</button>
         <label class="inline small">Scale <input id="scale" type="number" value="2" min="1" max="4" step="0.5" style="width:70px"/></label>
       </div>
 
-      <p class="small">If Perplexity returns a different schema (zones/lan/components), click <strong>Convert to schema</strong> first. Use a higher **Scale** for print-quality JPG/PNG.</p>
+      <p class="small">If Perplexity returns a different schema (zones/lan/components), click <strong>Convert to schema</strong> first. Use a higher <strong>Scale</strong> for print-quality PNG/JPG.</p>
     </div>
 
     <div class="card">
@@ -106,134 +107,3 @@
       const el = $('llmText'); const v = el.value.trim();
       if (v.startsWith('```')) return;
       try { el.value = '```aveva-arch\\n' + JSON.stringify(JSON.parse(v), null, 2) + '\\n```'; }
-      catch { alert('Paste valid JSON first.'); }
-    }
-    function convertToSchema(){
-      try{
-        if(!AVEVA) throw new Error('Renderer not loaded.');
-        const text = $('llmText').value.trim();
-        const obj = text.startsWith('```') ? AVEVA.parseAvevaArch(AVEVA.extractAvevaBlock(text))
-                                           : JSON.parse(text);
-        const coerced = AVEVA.coerceToSchema(obj);
-        $('llmText').value = '```aveva-arch\\n' + JSON.stringify(coerced, null, 2) + '\\n```';
-        $('arch').innerHTML = '<span class="ok">Converted to canonical schema.</span>';
-      }catch(e){
-        $('arch').innerHTML = '<span class="err">Convert error:</span> ' + e.message;
-        console.error(e);
-      }
-    }
-    function render(){
-      try{
-        if(!AVEVA) throw new Error('Renderer not loaded yet.');
-        const text = $('llmText').value.trim();
-        const useAuto = $('chkAuto').checked;
-        const width = parseInt($('w').value, 10) || 1400;
-        const height = parseInt($('h').value, 10) || 960;
-
-        const data = text.startsWith('```')
-          ? AVEVA.coerceToSchema(AVEVA.parseAvevaArch(AVEVA.extractAvevaBlock(text)))
-          : AVEVA.coerceToSchema(JSON.parse(text));
-
-        const svg = AVEVA.renderAvevaArch(data, { width, height, autolayout: useAuto });
-        lastSvg = svg;
-        $('arch').innerHTML = svg;
-        $('btnSvg').disabled = false;
-        $('btnJpg').disabled = false;
-      }catch(e){
-        $('arch').innerHTML = '<span class="err">Render error:</span> ' + e.message;
-        console.error(e);
-      }
-    }
-    async function downloadSvg(){
-      if(!lastSvg) return;
-      AVEVA.downloadSvg(lastSvg, 'architecture.svg');
-    }
-    async function downloadJpg(){
-      if(!lastSvg) return;
-      const scale = Math.max(1, parseFloat($('scale').value) || 2);
-      await AVEVA.downloadJpg(lastSvg, 'architecture.jpg', { scale, background: '#0B1020' });
-    }
-
-    function loadSampleAuto(){
-      const s = [
-        '```aveva-arch',
-        '{',
-        '  "version": 1,',
-        '  "metadata": {"title": "AVEVA System Platform Architecture (Test)", "subtitle": "Redundant SCADA + Historian + Cloud", "env": "prod"},',
-        '  "lanes": [',
-        '    { "id": "ops", "title": "Operations LAN" },',
-        '    { "id": "biz", "title": "Business LAN" },',
-        '    { "id": "cloud", "title": "Cloud" }',
-        '  ],',
-        '  "nodes": [',
-        '    { "id": "gr", "lane": "ops", "kind": "database", "title": "Galaxy Repository" },',
-        '    { "id": "aos_a", "lane": "ops", "kind": "app", "title": "Object Server A", "sub": "Primary" },',
-        '    { "id": "aos_b", "lane": "ops", "kind": "app", "title": "Object Server B", "sub": "Standby" },',
-        '    { "id": "omi_a", "lane": "ops", "kind": "app", "title": "OMI Server A" },',
-        '    { "id": "omi_b", "lane": "ops", "kind": "app", "title": "OMI Server B" },',
-        '    { "id": "web", "lane": "ops", "kind": "edge", "title": "Web Clients" },',
-        '    { "id": "hist", "lane": "biz", "kind": "database", "title": "AVEVA Historian" },',
-        '    { "id": "pi", "lane": "biz", "kind": "database", "title": "AVEVA PI Server" },',
-        '    { "id": "connect", "lane": "cloud", "kind": "cloud", "title": "AVEVA CONNECT" }',
-        '  ],',
-        '  "edges": [',
-        '    { "from": "gr", "to": "aos_a", "style": "solid", "label": "Config/GRAccess" },',
-        '    { "from": "gr", "to": "aos_b", "style": "solid", "label": "Config/GRAccess" },',
-        '    { "from": "aos_a", "to": "omi_a", "style": "solid", "label": "Orchestration" },',
-        '    { "from": "aos_b", "to": "omi_b", "style": "solid", "label": "Orchestration" },',
-        '    { "from": "omi_a", "to": "web", "style": "solid", "label": "HTTPS" },',
-        '    { "from": "omi_b", "to": "web", "style": "solid", "label": "HTTPS" },',
-        '    { "from": "aos_a", "to": "hist", "style": "solid", "label": "Process Data" },',
-        '    { "from": "aos_b", "to": "hist", "style": "solid", "label": "Process Data" },',
-        '    { "from": "hist", "to": "pi", "style": "solid", "label": "Data Feed" },',
-        '    { "from": "pi", "to": "connect", "style": "solid", "label": "Secure Connector" },',
-        '    { "from": "aos_a", "to": "aos_b", "style": "dashed", "label": "RMC Redundancy" },',
-        '    { "from": "omi_a", "to": "omi_b", "style": "dashed", "label": "Redundancy" }',
-        '  ]',
-        '}',
-        '```'
-      ].join('\\n');
-      $('llmText').value = s;
-      $('chkAuto').checked = true;
-    }
-
-    function loadSamplePinned(){
-      const s = [
-        '```json',
-        '{',
-        '  "lan": [',
-        '    { "name": "Operations LAN", "components": [',
-        '      { "type": "Galaxy Repository", "name": "GR" },',
-        '      { "type": "Object Server", "instances": [{"name":"AOS_A"},{"name":"AOS_B"}] },',
-        '      { "type": "OMI Visualization Server", "instances": [{"name":"OMI_A"},{"name":"OMI_B"}] }',
-        '    ]},',
-        '    { "name": "Business LAN", "components": [ { "type": "AVEVA PI Server", "name": "PI" } ] },',
-        '    { "name": "Cloud", "components": [ { "type": "AVEVA CONNECT", "name": "CONNECT" } ] }',
-        '  ],',
-        '  "connections": [',
-        '    { "from": "gr", "to": "aos_a", "label": "Config" },',
-        '    { "from": "gr", "to": "aos_b", "label": "Config" },',
-        '    { "from": "aos_a", "to": "omi_a", "label": "Real-time" },',
-        '    { "from": "aos_b", "to": "omi_b", "label": "Real-time" },',
-        '    { "from": "aos_a", "to": "pi", "label": "Data" },',
-        '    { "from": "aos_b", "to": "pi", "label": "Data" },',
-        '    { "from": "pi", "to": "connect", "label": "Secure Connector" }',
-        '  ]',
-        '}',
-        '```'
-      ].join('\\n');
-      $('llmText').value = s;
-      $('chkAuto').checked = true;
-    }
-
-    $('btnLoad').addEventListener('click', loadRenderer);
-    $('btnWrap').addEventListener('click', wrapFence);
-    $('btnConvert').addEventListener('click', convertToSchema);
-    $('btnRender').addEventListener('click', render);
-    $('btnSampleAuto').addEventListener('click', loadSampleAuto);
-    $('btnSamplePinned').addEventListener('click', loadSamplePinned);
-    $('btnSvg').addEventListener('click', downloadSvg);
-    $('btnJpg').addEventListener('click', downloadJpg);
-  </script>
-</body>
-</html>
