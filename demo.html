@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>AVEVA Architecture Renderer – Demo</title>
+
+  <style>
+    body{font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:#f5f7fa}
+    header{background:#0e1220;color:#fff;padding:12px 24px;font-weight:600}
+    #controls{padding:16px;background:#ffffff;border-bottom:1px solid #d0d5dd}
+    textarea{width:100%;height:120px;font:13px/1.4 monospace;resize:vertical}
+    button{margin-top:8px;padding:8px 14px;font-weight:600;border:1px solid #3498db;background:#5cc8f6;color:#fff;border-radius:4px;cursor:pointer}
+    button:hover{background:#3498db}
+    #svg-container{overflow:auto;padding:16px}
+    svg{border:1px solid #d0d5dd;background:#0e1220}
+  </style>
+</head>
+
+<body>
+  <header>AVEVA Architecture Renderer – Interactive Demo</header>
+
+  <div id="controls">
+    <label for="user-input"><strong>Paste architecture request:</strong></label>
+    <textarea id="user-input">// Try either:
+// 1. Structured JSON (as returned by Perplexity)  ➜ will be drawn directly
+// 2. Plain English description                  ➜ will be parsed & then drawn
+//
+// Example (English):
+// "We have browsers that hit a load balancer in the DMZ. It forwards
+//  traffic to two web servers, which read & write to a Postgres database
+//  in the secure zone."
+    </textarea>
+    <button id="render-btn">Render diagram</button>
+  </div>
+
+  <div id="svg-container">
+    <!-- SVG will appear here -->
+  </div>
+
+  <!-- Load BOTH modules (ESM) -->
+  <script type="module">
+    /* --------------------------------------------------------------------
+       1. Import the core renderer (your current file, unchanged)
+    -------------------------------------------------------------------- */
+    import { renderAvevaArch, coerceToSchema, extractAvevaBlock,
+             parseAvevaArch } from './aveva-renderer.js';
+
+    /* --------------------------------------------------------------------
+       2. Import the natural-language extension (adds renderFromNaturalLanguage)
+    -------------------------------------------------------------------- */
+    import { renderFromNaturalLanguage } from './aveva-nlp-extension.js';
+
+    /* --------------------------------------------------------------------
+       3. Helper: auto-detect input type and call the right renderer
+    -------------------------------------------------------------------- */
+    function handleUserInput(raw) {
+      let svgString;
+
+      // First try natural-language parsing (the function itself will
+      // fall back to structured parsing if the text is JSON/fenced).
+      try {
+        svgString = renderFromNaturalLanguage(raw.trim(), {
+          width: 1400,
+          height: 1000
+        });
+      } catch (err) {
+        // If extension fails, fall back to original structured pipeline
+        console.warn('NLP render failed → trying structured JSON:', err.message);
+        try {
+          const data = coerceToSchema(
+            parseAvevaArch(extractAvevaBlock(raw))
+          );
+          svgString = renderAvevaArch(data, { width: 1400, height: 1000 });
+        } catch (e2) {
+          alert('Unable to parse input as natural language OR JSON.');
+          throw e2;
+        }
+      }
+
+      // Inject SVG into the page
+      document.getElementById('svg-container').innerHTML = svgString;
+    }
+
+    /* --------------------------------------------------------------------
+       4. Wire up the button
+    -------------------------------------------------------------------- */
+    document.getElementById('render-btn').addEventListener('click', () => {
+      const text = document.getElementById('user-input').value;
+      handleUserInput(text);
+    });
+
+    /* --------------------------------------------------------------------
+       5. Expose helpers globally (optional)
+    -------------------------------------------------------------------- */
+    window.renderAvevaArch = renderAvevaArch;
+    window.renderFromNaturalLanguage = renderFromNaturalLanguage;
+    window.handleUserInput = handleUserInput;
+  </script>
+</body>
+</html>
