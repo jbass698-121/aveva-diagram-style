@@ -1,6 +1,14 @@
-// AVEVA Architecture Micro SVG Renderer — v1.7 (ESM)
-// Public API exports: StyleTokens, extractAvevaBlock, parseAvevaArch, coerceToSchema,
-//                     renderAvevaArch, renderFromLLM
+// AVEVA Architecture Micro SVG Renderer — v1.8 (ESM)
+// - Tolerant fenced-block parsing
+// - Schema coercion (zones/lan/components → canonical)
+// - Auto-layout (ranked L→R), grid-snap, safe lane-local Y clamp
+// - Fixed-size node icons (no giant loops)
+// - Export helpers: downloadSvg, downloadPng, downloadJpg
+//
+// Public API:
+//   StyleTokens, extractAvevaBlock, parseAvevaArch, coerceToSchema,
+//   renderAvevaArch, renderFromLLM,
+//   svgToBlob, downloadSvg, svgToRasterDataURL, downloadPng, downloadJpg
 
 export const StyleTokens = {
   color: {
@@ -21,7 +29,7 @@ const GRID = 8;
 const SNAP = (v) => Math.round((v ?? 0) / GRID) * GRID;
 const esc  = (s) => (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-// ── Tolerant parsing ────────────────────────────────────────────────────────────
+// ── tolerant fenced-block parsing ──────────────────────────────────────────────
 export function extractAvevaBlock(text){
   if (!text) throw new Error('Empty input');
   const str = String(text);
@@ -39,7 +47,7 @@ export function parseAvevaArch(block){
   return JSON.parse(t);
 }
 
-// ── Best-effort coercion of “near-miss” schemas to canonical schema ────────────
+// ── schema coercion (handles “near-miss” outputs) ─────────────────────────────
 const slug = (s) => (s ?? '').toString().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
 function guessKind(t='', n=''){
   const s = (t + ' ' + n).toLowerCase();
@@ -48,92 +56,62 @@ function guessKind(t='', n=''){
   if (/\bclient|gateway|proxy|lb|load\s*balancer|edge\b/.test(s)) return 'edge';
   return 'app';
 }
-
-// Accepts: canonical schema OR common variants seen from Perplexity
 export function coerceToSchema(input){
-  // Strings, fenced blocks → object
   if (typeof input === 'string'){
     const str = input.trim();
-    const json = str.startsWith('```') ? parseAvevaArch(extractAvevaBlock(str)) :
-                 str.startsWith('{')   ? JSON.parse(str) : (()=>{throw new Error('Paste JSON or a fenced block');})();
+    const json = str.startsWith('```') ? parseAvevaArch(extractAvevaBlock(str))
+               : str.startsWith('{')   ? JSON.parse(str)
+               : (()=>{throw new Error('Paste JSON or a fenced block');})();
     return coerceToSchema(json);
   }
+  if (input && input.version === 1 && Array.isArray(input.lanes) && Array.isArray(input.nodes)) return input;
 
-  // Already canonical?
-  if (input && input.version === 1 && Array.isArray(input.lanes) && Array.isArray(input.nodes)){
-    // Ensure ids are slugs and unique
-    const ids = new Set();
-    for (const l of input.lanes){ l.id = l.id || slug(l.title || l.name || 'lane'); if (ids.has(l.id)) l.id = l.id + '_' + Math.random().toString(36).slice(2,5); ids.add(l.id); }
-    return input;
-  }
-
-  // Variant A: { lanes:[{id|name|title}], nodes:[...], edges:[...] } with small differences
   if (Array.isArray(input.lanes) || Array.isArray(input.lan)){
     const rawLanes = input.lanes || input.lan || [];
     const lanes = rawLanes.map((l,i)=>({ id: slug(l.id || l.name || l.title || `lane_${i+1}`), title: l.title || l.name || l.id || `Lane ${i+1}` }));
-    const laneMap = new Map(lanes.map(l=>[l.id,l.id]));
+    const laneIds = new Set(lanes.map(l=>l.id));
     const nodes = [];
     const edges = [];
 
-    // If nodes provided in canonical-ish shape
     if (Array.isArray(input.nodes)){
       for (const n of input.nodes){
-        const laneId = slug(n.lane || n.zone || '');
-        const lid = laneMap.has(laneId) ? laneId : (lanes[0]?.id || 'lane_1');
+        const lid = slug(n.lane || n.zone || lanes[0]?.id || 'lane_1');
         nodes.push({
           id: n.id || slug(n.name || n.title || n.type || `node_${nodes.length+1}`),
-          lane: lid,
+          lane: laneIds.has(lid) ? lid : (lanes[0]?.id || 'lane_1'),
           kind: n.kind || guessKind(n.type, n.title || n.name),
           title: n.title || n.name || n.type || 'Node',
-          sub: n.sub || undefined,
-          x: n.x, y: n.y, w: n.w, h: n.h
+          sub: n.sub, x: n.x, y: n.y, w: n.w, h: n.h
         });
       }
     }
-
-    // If lanes contain components/elements
     for (const L of rawLanes){
       const lid = slug(L.id || L.name || L.title || '');
       const items = L.elements || L.components || [];
       for (const it of items){
-        const baseId = slug(it.id || it.name || it.type || ('n_'+nodes.length+1));
-        if (Array.isArray(it.instances) || Array.isArray(it.nodes)){
-          const insts = it.instances || it.nodes;
+        const baseId = slug(it.id || it.name || it.type || `n_${nodes.length+1}`);
+        const lane = laneIds.has(lid) ? lid : (lanes[0]?.id || 'lane_1');
+        const insts = it.instances || it.nodes;
+        if (Array.isArray(insts)){
           for (const inst of insts){
-            nodes.push({
-              id: slug(inst.id || inst.name || (baseId + '_' + (insts.indexOf(inst)+1))),
-              lane: laneMap.has(lid) ? lid : (lanes[0]?.id || 'lane_1'),
-              kind: guessKind(it.type, inst.name || it.name),
-              title: inst.name || it.name || it.type || 'Node'
-            });
+            nodes.push({ id: slug(inst.id || inst.name || (baseId + '_' + (insts.indexOf(inst)+1))), lane, kind: guessKind(it.type, inst.name || it.name), title: inst.name || it.name || it.type || 'Node' });
           }
         } else {
-          nodes.push({
-            id: baseId || ('n_'+(nodes.length+1)),
-            lane: laneMap.has(lid) ? lid : (lanes[0]?.id || 'lane_1'),
-            kind: guessKind(it.type, it.name),
-            title: it.name || it.type || 'Node'
-          });
+          nodes.push({ id: baseId, lane, kind: guessKind(it.type, it.name), title: it.name || it.type || 'Node' });
         }
       }
     }
-
-    // Edges (top level "connections")
     if (Array.isArray(input.connections)){
       const ids = new Set(nodes.map(n=>n.id));
       for (const c of input.connections){
-        const from = c.from && ids.has(c.from) ? c.from : slug(c.from || '');
-        const to   = c.to   && ids.has(c.to)   ? c.to   : slug(c.to   || '');
-        if (from && to){
-          edges.push({ from, to, style: /dash/i.test(c.style||'') ? 'dashed' : 'solid', label: c.label || c.protocol || undefined });
-        }
+        const from = ids.has(c.from) ? c.from : slug(c.from || '');
+        const to   = ids.has(c.to)   ? c.to   : slug(c.to   || '');
+        if (from && to) edges.push({ from, to, style: /dash/i.test(c.style||'') ? 'dashed' : 'solid', label: c.label || c.protocol || undefined });
       }
     }
-
     return { version: 1, metadata: input.metadata || {}, lanes, nodes, edges };
   }
 
-  // Variant B: { zones:[{ name, subnets:[{nodes:[...]}] }], connections:[...] }
   if (Array.isArray(input.zones)){
     const lanes = input.zones.map((z,i)=>({ id: slug(z.name || `zone_${i+1}`), title: z.name || `Zone ${i+1}` }));
     const nodes = [];
@@ -141,37 +119,22 @@ export function coerceToSchema(input){
       const lid = slug(z.name || '');
       for (const s of (z.subnets || [])){
         for (const n of (s.nodes || [])){
-          nodes.push({
-            id: slug(n.id || n.name || n.type || `n_${nodes.length+1}`),
-            lane: lid,
-            kind: guessKind(n.type, n.name),
-            title: n.name || n.type || 'Node',
-            sub: n.redundancyRole || n.role || undefined
-          });
+          nodes.push({ id: slug(n.id || n.name || n.type || `n_${nodes.length+1}`), lane: slug(lid), kind: guessKind(n.type, n.name), title: n.name || n.type || 'Node', sub: n.redundancyRole || n.role || undefined });
         }
       }
     }
     const edges = [];
     for (const c of (input.connections || [])){
-      const from = slug(c.from || '');
-      const to   = slug(c.to   || '');
+      const from = slug(c.from || ''), to = slug(c.to || '');
       if (from && to) edges.push({ from, to, style: /dash/i.test(c.style||'') ? 'dashed' : 'solid', label: c.label || c.protocol || undefined });
     }
     return { version: 1, metadata: input.metadata || {}, lanes, nodes, edges };
   }
 
-  // Fallback: assume it’s already close to canonical; ensure keys exist
-  return {
-    version: 1,
-    metadata: input.metadata || {},
-    lanes: input.lanes || [],
-    nodes: input.nodes || [],
-    edges: input.edges || [],
-    notes: input.notes || []
-  };
+  return { version: 1, metadata: input.metadata || {}, lanes: input.lanes || [], nodes: input.nodes || [], edges: input.edges || [], notes: input.notes || [] };
 }
 
-// ── Styling & defs ─────────────────────────────────────────────────────────────
+// ── styling & defs (fixed-size icons) ──────────────────────────────────────────
 function defaultCSS(t=StyleTokens){
   return `.lane{fill:${t.color.surface};stroke:${t.color.grid};stroke-width:1}
 .node{fill:${t.color.surface};stroke:${t.color.primary};stroke-width:${t.geom.nodeStroke};rx:${t.geom.nodeRadius}}
@@ -180,16 +143,16 @@ function defaultCSS(t=StyleTokens){
 .title{fill:${t.color.text}}`;
 }
 function defaultDefs(t=StyleTokens){
-  const arrow   = `<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="${t.geom.arrowSize}" markerHeight="${t.geom.arrowSize}" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="${t.color.muted}"/></marker>`;
-  const symCloud= `<symbol id="sym-cloud" viewBox="0 0 24 24"><path d="M7 17h10a4 4 0 0 0 0-8 5 5 0 0 0-9.8 1.5A3.5 3.5 0 0 0 7 17z" fill="none" stroke="${t.color.primary}" stroke-width="${t.geom.nodeStroke}" stroke-linejoin="round"/></symbol>`;
-  const symDB   = `<symbol id="sym-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3" fill="none" stroke="${t.color.primary}" stroke-width="${t.geom.nodeStroke}"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5" fill="none" stroke="${t.color.primary}" stroke-width="${t.geom.nodeStroke}"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" fill="none" stroke="${t.color.primary}" stroke-width="${t.geom.nodeStroke}"/></symbol>`;
-  const symEdge = `<symbol id="sym-edge" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3" fill="none" stroke="${t.color.primary}" stroke-width="${t.geom.nodeStroke}"/><path d="M8 8h8v8H8z" fill="none" stroke="${t.color.primary}" stroke-width="${t.geom.nodeStroke}"/></symbol>`;
-  const symApp  = `<symbol id="sym-app" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2" fill="none" stroke="${t.color.primary}" stroke-width="${t.geom.nodeStroke}"/><circle cx="12" cy="12" r="3" fill="none" stroke="${t.color.primary}" stroke-width="${t.geom.nodeStroke}"/></symbol>`;
+  const arrow = `<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="${t.geom.arrowSize}" markerHeight="${t.geom.arrowSize}" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="${t.color.muted}"/></marker>`;
+  const symCloud = `<symbol id="sym-cloud" viewBox="0 0 24 24" overflow="visible"><path d="M7 17h10a4 4 0 0 0 0-8 5 5 0 0 0-9.8 1.5A3.5 3.5 0 0 0 7 17z" fill="none" stroke="${t.color.primary}" stroke-width="${t.geom.nodeStroke}" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></symbol>`;
+  const symDB    = `<symbol id="sym-database" viewBox="0 0 24 24" overflow="visible"><ellipse cx="12" cy="5" rx="8" ry="3" fill="none" stroke="${t.color.primary}" stroke-width="${t.geom.nodeStroke}" vector-effect="non-scaling-stroke"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" fill="none" stroke="${t.color.primary}" stroke-width="${t.geom.nodeStroke}" vector-effect="non-scaling-stroke"/></symbol>`;
+  const symEdge  = `<symbol id="sym-edge" viewBox="0 0 24 24" overflow="visible"><rect x="4" y="4" width="16" height="16" rx="3" fill="none" stroke="${t.color.primary}" stroke-width="${t.geom.nodeStroke}" vector-effect="non-scaling-stroke"/><path d="M8 8h8v8H8z" fill="none" stroke="${t.color.primary}" stroke-width="${t.geom.nodeStroke}" vector-effect="non-scaling-stroke"/></symbol>`;
+  const symApp   = `<symbol id="sym-app" viewBox="0 0 24 24" overflow="visible"><rect x="5" y="5" width="14" height="14" rx="2" fill="none" stroke="${t.color.primary}" stroke-width="${t.geom.nodeStroke}" vector-effect="non-scaling-stroke"/><circle cx="12" cy="12" r="3" fill="none" stroke="${t.color.primary}" stroke-width="${t.geom.nodeStroke}" vector-effect="non-scaling-stroke"/></symbol>`;
   return arrow + symCloud + symDB + symEdge + symApp;
 }
 const iconForKind = (k) => k==='database' ? 'sym-database' : k==='cloud' ? 'sym-cloud' : k==='edge' ? 'sym-edge' : 'sym-app';
 
-// ── Normalize & layout ─────────────────────────────────────────────────────────
+// ── normalize & layout ─────────────────────────────────────────────────────────
 function normalizeData(data){
   const lanes = data.lanes || [];
   const laneIds = new Set(lanes.map(l => l.id));
@@ -202,7 +165,6 @@ function normalizeData(data){
   }
   return { ...data, lanes, nodes, edges: data.edges || [], notes: data.notes || [] };
 }
-
 function computeRanks(nodes, edges){
   const byId = new Map(nodes.map(n => [n.id, n]));
   const out = new Map();
@@ -254,7 +216,6 @@ function autoLayoutRank(model, width){
     for (const n of nodes) n.x = SNAP(x0 + (n.x - x0) * scale);
   }
 }
-
 function manhattanPath(a,b){
   const ax = a.x + a.w, ay = a.y + a.h/2, bx = b.x, by = b.y + b.h/2;
   const mx = ax + 20, nx = bx - 20;
@@ -266,7 +227,7 @@ function midpoint(d){
   return { x: nums[i-2] || 0, y: nums[i-1] || 0 };
 }
 
-// ── Main renderer ──────────────────────────────────────────────────────────────
+// ── main renderer ─────────────────────────────────────────────────────────────
 export function renderAvevaArch(input, opts = {}){
   const width = opts.width ?? 1400;
   const height = opts.height ?? 960;          // taller default
@@ -274,18 +235,15 @@ export function renderAvevaArch(input, opts = {}){
   const lanePadding = opts.lanePadding ?? 16;
   const useAuto = opts.autolayout !== false;  // default ON
 
-  // Coerce near-miss schemas, then normalize
   const coerced = coerceToSchema(input);
   const data = normalizeData(coerced);
 
-  // Layout if any x/y is missing OR auto is requested
   const missingXY = data.nodes.some(n => n.x == null || n.y == null);
   if (useAuto || missingXY) autoLayoutRank(data, width);
 
   const lanes = data.lanes || [];
   const laneH = Math.floor((height - laneGap * (lanes.length + 1)) / Math.max(1, lanes.length));
 
-  // Lane tops
   const laneTop = new Map();
   let ty = laneGap;
   for (const l of lanes){ laneTop.set(l.id, ty); ty += laneH + laneGap; }
@@ -294,18 +252,18 @@ export function renderAvevaArch(input, opts = {}){
   const padY = 16;
   for (const n of data.nodes){
     const top = laneTop.get(n.lane) ?? laneGap;
-    if ((n.y ?? 0) > laneH) n.y = n.y - top;           // convert absolute to lane-local
+    if ((n.y ?? 0) > laneH) n.y = n.y - top;  // convert absolute to lane-local
     const maxLocal = Math.max(padY, laneH - (n.h ?? 80) - padY);
     const local = (n.y ?? padY);
     n.y = Math.min(Math.max(local, padY), maxLocal);
   }
 
-  // SVG
   const parts = [];
   parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`);
   parts.push(`<style>${defaultCSS()}</style><defs>${defaultDefs()}</defs>`);
   parts.push(`<rect x="0" y="0" width="${width}" height="${height}" fill="${StyleTokens.color.bg}"/>`);
 
+  // Header
   const title = data.metadata?.title || 'Architecture';
   const subtitle = data.metadata?.subtitle || '';
   const env = data.metadata?.env;
@@ -326,7 +284,6 @@ export function renderAvevaArch(input, opts = {}){
     parts.push(`<text class="title" x="${laneGap + lanePadding}" y="${ly + 10}" style="font:${StyleTokens.type.title}; text-transform:uppercase; letter-spacing:.08em;">${esc(l.title)}</text>`);
   }
 
-  // Node map
   const nodeBy = new Map();
   for (const n of data.nodes) nodeBy.set(n.id, n);
 
@@ -349,13 +306,14 @@ export function renderAvevaArch(input, opts = {}){
     parts.push(`<g data-node="${esc(n.id)}" transform="translate(${n.x},${ly})">`);
     parts.push(`<rect class="node" x="0" y="0" width="${n.w}" height="${n.h}" rx="${StyleTokens.geom.nodeRadius}"/>`);
     const icon = n.icon || iconForKind(n.kind);
-    parts.push(`<g transform="translate(${n.w-28},10) scale(0.9)"><use href="#${icon}" stroke="${StyleTokens.color.primary}"/></g>`);
+    // fixed-size icon
+    parts.push(`<use href="#${icon}" x="${n.w - 22}" y="8" width="18" height="18"/>`);
     parts.push(`<text x="12" y="18" style="font:${StyleTokens.type.nodeTitle}; fill:${StyleTokens.color.text};">${esc(n.title)}</text>`);
     if (n.sub) parts.push(`<text x="12" y="36" style="font:${StyleTokens.type.nodeSub}; fill:${StyleTokens.color.muted};">${esc(n.sub)}</text>`);
     parts.push(`</g>`);
   }
 
-  // Notes (absolute within lane)
+  // Notes
   for (const note of (data.notes || [])){
     const ly = note.lane ? (laneTop.get(note.lane) || 0) : 0;
     parts.push(`<text x="${laneGap + note.x}" y="${ly + note.y}" style="font:${StyleTokens.type.nodeSub}; fill:${StyleTokens.color.muted};">${esc(note.text)}</text>`);
@@ -368,4 +326,56 @@ export function renderAvevaArch(input, opts = {}){
 export function renderFromLLM(llmText, options){
   const data = coerceToSchema(parseAvevaArch(extractAvevaBlock(llmText)));
   return renderAvevaArch(data, options);
+}
+
+// ── export helpers ─────────────────────────────────────────────────────────────
+export function svgToBlob(svgString){
+  return new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+}
+function inferSizeFromSvg(svgString){
+  const m = svgString.match(/<svg[^>]*\bwidth="(\d+)"[^>]*\bheight="(\d+)"/i);
+  if (m) return { width: parseInt(m[1],10), height: parseInt(m[2],10) };
+  const vb = svgString.match(/\bviewBox="[^"]*?(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)/i);
+  if (vb) return { width: parseFloat(vb[3]), height: parseFloat(vb[4]) };
+  return { width: 1400, height: 960 };
+}
+export function downloadSvg(svgString, filename='architecture.svg'){
+  const blob = svgToBlob(svgString);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+  a.remove(); URL.revokeObjectURL(url);
+}
+export async function svgToRasterDataURL(svgString, {
+  type='image/png', quality=0.92, width, height, scale=1, background=StyleTokens.color.bg
+} = {}){
+  const size = inferSizeFromSvg(svgString);
+  const W = Math.round((width ?? size.width) * scale);
+  const H = Math.round((height ?? size.height) * scale);
+
+  const blob = svgToBlob(svgString);
+  const url = URL.createObjectURL(blob);
+
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  const loaded = new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
+  img.src = url;
+  await loaded;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  if (background){ ctx.fillStyle = background; ctx.fillRect(0,0,W,H); }
+  ctx.drawImage(img, 0, 0, W, H);
+  URL.revokeObjectURL(url);
+
+  return canvas.toDataURL(type, quality);
+}
+export async function downloadPng(svgString, filename='architecture.png', opts={}){
+  const dataUrl = await svgToRasterDataURL(svgString, { type: 'image/png', ...opts });
+  const a = document.createElement('a'); a.href = dataUrl; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+}
+export async function downloadJpg(svgString, filename='architecture.jpg', opts={}){
+  const dataUrl = await svgToRasterDataURL(svgString, { type: 'image/jpeg', quality: 0.92, background: '#0B1020', ...opts });
+  const a = document.createElement('a'); a.href = dataUrl; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
 }
