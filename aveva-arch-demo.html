@@ -178,3 +178,40 @@
       const s = [
         '```json',
         '{',
+        '  "lan": [',
+        '    { "name": "Operations LAN", "components": [',
+        '      { "type": "Galaxy Repository", "name": "GR" },',
+        '      { "type": "Object Server", "instances": [{"name":"AOS_A"},{"name":"AOS_B"}] },',
+        '      { "type": "OMI Visualization Server", "instances": [{"name":"OMI_A"},{"name":"OMI_B"}] }',
+        '    ]},',
+        '    { "name": "Business LAN", "components": [ { "type": "AVEVA PI Server", "name": "PI" } ] },',
+        '    { "name": "Cloud", "components": [ { "type": "AVEVA CONNECT", "name": "CONNECT" } ] }',
+        '  ],',
+        '  "connections": [',
+        '    { "from": "gr", "to": "aos_a", "label": "Config" },',
+        '    { "from": "gr", "to": "aos_b", "label": "Config" },',
+        '    { "from": "aos_a", "to": "omi_a", "label": "Real-time" },',
+        '    { "from": "aos_b", "to": "omi_b", "label": "Real-time" },',
+        '    { "from": "aos_a", "to": "pi", "label": "Data" },',
+        '    { "from": "aos_b", "to": "pi", "label": "Data" },',
+        '    { "from": "pi", "to": "connect", "label": "Secure Connector" }',
+        '  ]',
+        '}',
+        '```'
+      ].join('\\n');
+      $('llmText').value = s;      // shows variant schema
+      $('chkAuto').checked = true; // auto-layout OK
+    }
+
+    $('btnLoad').addEventListener('click', loadRenderer);
+    $('btnWrap').addEventListener('click', wrapFence);
+    $('btnConvert').addEventListener('click', convertToSchema);
+    $('btnRender').addEventListener('click', render);
+    $('btnSampleAuto').addEventListener('click', loadSampleAuto);
+    $('btnSamplePinned').addEventListener('click', loadSamplePinned);
+
+    // Preload from hash if present
+    (function(){ const m = location.hash.match(/#llm=(.*)$/); if (m) { try { $('llmText').value = decodeURIComponent(m[1]); } catch(e){} } })();
+  </script>
+</body>
+</html>
