@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>AVEVA Architecture Renderer – Professional Demo V2</title>
+  <title>AVEVA Architecture Renderer – Working Demo</title>
 
   <style>
     body {
@@ -54,6 +54,7 @@
       padding: 12px;
       background: #f8fafc;
       transition: border-color 0.2s;
+      box-sizing: border-box;
     }
     
     textarea:focus {
@@ -97,7 +98,7 @@
       border-color: #d1d5db;
     }
     
-    .btn-download:hover {
+    .btn-download:hover:not(:disabled) {
       background: #f3f4f6;
       border-color: #9ca3af;
       transform: translateY(-1px);
@@ -143,25 +144,36 @@
       margin-bottom: 12px;
       color: #374151;
     }
+
+    .error-message {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 12px;
+      display: none;
+    }
   </style>
 </head>
 
 <body>
   <header>
     <h1 class="header-title">AVEVA Architecture Renderer</h1>
-    <p class="header-subtitle">Professional architecture diagram generator with natural language processing</p>
+    <p class="header-subtitle">Professional architecture diagram generator</p>
   </header>
 
   <div id="controls">
     <label for="user-input">Architecture Description:</label>
     <div class="example-text">
-      Try describing your architecture in plain English, or paste structured JSON data
+      Describe your architecture in plain English
     </div>
-    <textarea id="user-input" placeholder="Example: 'We have a web application with a load balancer, two web servers, and a database. Users connect through browsers in a DMZ network.'">We have analytics clients and RDS clients for future expansion. There's a historian in the perimeter network. Engineering clients connect through a secured process LAN. The supervisory network has IO servers for primary and secondary operations. Device communication includes safety systems, LOFS, CGSS, RPOP, and LHFS components.</textarea>
+    <textarea id="user-input" placeholder="Example: We have analytics clients and RDS clients for future expansion...">We have analytics clients and RDS clients for future expansion. There's a historian in the perimeter network. Engineering clients connect through a secured process LAN. The supervisory network has IO servers for primary and secondary operations. Device communication includes safety systems, LOFS, CGSS, RPOP, and LHFS components.</textarea>
     
     <div class="button-group">
       <button id="render-btn" class="btn-primary">🎨 Generate Architecture Diagram</button>
     </div>
+    
+    <div id="error-message" class="error-message"></div>
   </div>
 
   <div class="download-section">
@@ -188,17 +200,34 @@
   </div>
 
   <script type="module">
-    import { renderAvevaArch, coerceToSchema, extractAvevaBlock, parseAvevaArch, downloadSvg, downloadPng, downloadJpg } from './aveva-renderer.js';
-    import { renderFromNaturalLanguage } from './aveva-nlp-extension.js';
+    // Import from the correct files
+    import { renderAvevaArch, downloadSvg, downloadPng, downloadJpg } from './aveva-renderer-1.js';
+    import { convertNaturalLanguageToJSON } from './nlp-to-json.js';
 
     let currentSvgString = null;
 
+    function showError(message) {
+      const errorDiv = document.getElementById('error-message');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      setTimeout(() => {
+        errorDiv.style.display = 'none';
+      }, 5000);
+    }
+
     function handleUserInput(raw) {
       try {
-        const svgString = renderFromNaturalLanguage(raw.trim(), {
+        console.log('Processing input:', raw);
+        
+        const jsonData = convertNaturalLanguageToJSON(raw.trim());
+        console.log('Generated JSON:', jsonData);
+        
+        const svgString = renderAvevaArch(jsonData, {
           width: 1400,
           height: 1000
         });
+        
+        console.log('Generated SVG length:', svgString.length);
         
         document.getElementById('svg-container').innerHTML = svgString;
         currentSvgString = svgString;
@@ -210,12 +239,13 @@
         
       } catch (error) {
         console.error('Rendering failed:', error);
-        alert('Unable to parse input. Please check your architecture description or JSON format.');
+        showError(`Rendering failed: ${error.message}`);
       }
     }
 
     // Event listeners
     document.getElementById('render-btn').addEventListener('click', () => {
+      console.log('Render button clicked');
       const text = document.getElementById('user-input').value;
       handleUserInput(text);
     });
@@ -228,26 +258,38 @@
 
     document.getElementById('download-png').addEventListener('click', async () => {
       if (currentSvgString) {
-        await downloadPng(currentSvgString, 'architecture-diagram.png', {
-          scale: 2,
-          background: '#ffffff'
-        });
+        try {
+          await downloadPng(currentSvgString, 'architecture-diagram.png', {
+            scale: 2,
+            background: '#ffffff'
+          });
+        } catch (error) {
+          showError(`PNG download failed: ${error.message}`);
+        }
       }
     });
 
     document.getElementById('download-jpg').addEventListener('click', async () => {
       if (currentSvgString) {
-        await downloadJpg(currentSvgString, 'architecture-diagram.jpg', {
-          scale: 2,
-          quality: 0.95,
-          background: '#ffffff'
-        });
+        try {
+          await downloadJpg(currentSvgString, 'architecture-diagram.jpg', {
+            scale: 2,
+            quality: 0.95,
+            background: '#ffffff'
+          });
+        } catch (error) {
+          showError(`JPG download failed: ${error.message}`);
+        }
       }
     });
 
-    // Auto-render on load
-    window.addEventListener('load', () => {
-      handleUserInput(document.getElementById('user-input').value);
+    // Auto-render on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('Page loaded, attempting initial render');
+      const initialText = document.getElementById('user-input').value;
+      if (initialText.trim()) {
+        handleUserInput(initialText);
+      }
     });
   </script>
 </body>
