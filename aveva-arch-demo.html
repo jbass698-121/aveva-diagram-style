@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>AVEVA Architecture Renderer — Demo (Auto‑layout)</title>
+  <title>AVEVA Architecture Renderer — Demo (Auto-layout + Converter)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     body{font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0b1020;color:#e7ecf4;margin:0}
@@ -16,7 +16,7 @@
     button.secondary{background:#9de2d5}
     button:disabled{opacity:.5;cursor:not-allowed}
     #arch{background:#0e1220;border:1px solid #1f2742;border-radius:12px;padding:10px;min-height:360px;display:flex;align-items:center;justify-content:center}
-    .small{color:#93a1b5;font-size:12px}
+    .small{color:#93A1B5;font-size:12px}
     .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .ok{color:#4fd1a1;font-weight:700}.err{color:#ff6b6b;font-weight:700}
     @media (max-width: 980px){.wrap{grid-template-columns:1fr}}
@@ -27,7 +27,7 @@
   <header>
     <div class="row" style="justify-content:space-between">
       <div><strong>AVEVA Architecture Renderer — Demo</strong></div>
-      <div class="small">Accepts `aveva-arch` fence, `json` fence, or raw JSON • Auto‑layout on by default</div>
+      <div class="small">Accepts `aveva-arch` fence, `json` fence, or raw JSON • Auto-layout + Converter</div>
     </div>
   </header>
 
@@ -41,14 +41,15 @@
       </div>
       <hr style="border:0;border-top:1px solid #1f2742;margin:14px 0"/>
       <div class="label">LLM Response (paste Perplexity output)</div>
-      <textarea id="llmText" placeholder="Paste a single fenced ```aveva-arch block, a ```json block, or plain JSON..."></textarea>
+      <textarea id="llmText" placeholder="Paste a fenced ```aveva-arch``` or ```json``` block, or raw JSON (e.g., zones/subnets)..."></textarea>
       <div class="row" style="margin-top:10px">
         <button class="secondary" id="btnSample">Load sample</button>
         <button id="btnWrap">Wrap as `aveva-arch`</button>
-        <label class="inline"><input type="checkbox" id="chkAuto" checked />Use auto‑layout</label>
+        <button id="btnConvert">Convert to schema</button>
+        <label class="inline"><input type="checkbox" id="chkAuto" checked />Use auto-layout</label>
         <button id="btnRender" disabled>Render</button>
       </div>
-      <p class="small">Tip: If your Space returns raw JSON, click **Wrap** to fence it. Auto‑layout arranges nodes left→right based on dependencies.</p>
+      <p class="small">If it’s blank, click <b>Convert to schema</b>. The renderer also auto-converts on Render.</p>
     </div>
 
     <div class="card">
@@ -116,24 +117,41 @@
       catch { alert('Paste valid JSON first.'); }
     }
 
+    function convertSchema(){
+      if(!AVEVA) { alert('Load renderer first.'); return; }
+      const el = $('llmText');
+      let txt = el.value.trim();
+      try {
+        if (/```/.test(txt)) txt = AVEVA.extractAvevaBlock(txt);
+        const obj = JSON.parse(txt);
+        const coerced = AVEVA.coerceToSchema(obj);
+        if (!Array.isArray(coerced.lanes) || !Array.isArray(coerced.nodes) || coerced.nodes.length === 0) {
+          alert('Converted but empty; check your JSON structure.');
+          return;
+        }
+        el.value = '```aveva-arch\n' + JSON.stringify(coerced, null, 2) + '\n```';
+        alert('Converted to canonical schema. You can Render now.');
+      } catch (e) {
+        alert('Could not convert. Ensure the text is valid JSON.\n' + e.message);
+      }
+    }
+
     function render(){
       try{
         if(!AVEVA) throw new Error('Renderer not loaded yet.');
         const text = $('llmText').value.trim();
         const useAuto = $('chkAuto').checked;
 
-        if (/```/.test(text)) {
-          // Let module parse the fence
-          const data = AVEVA.parseAvevaArch(AVEVA.extractAvevaBlock(text));
-          const svg = AVEVA.renderAvevaArch(data, { width: 1400, height: 720, autolayout: useAuto });
-          $('arch').innerHTML = svg;
-          return;
+        if (/```/.test(text)){
+          const svg = AVEVA.renderFromLLM(text, { width: 1400, height: 720, autolayout: useAuto });
+          $('arch').innerHTML = svg; return;
         }
-        if (text.startsWith('{')) {
-          const data = JSON.parse(text);
+        if (text.startsWith('{')){
+          const obj = JSON.parse(text);
+          const data = AVEVA.coerceToSchema(obj);
+          if (!Array.isArray(data.nodes) || data.nodes.length === 0) throw new Error('No nodes after conversion.');
           const svg = AVEVA.renderAvevaArch(data, { width: 1400, height: 720, autolayout: useAuto });
-          $('arch').innerHTML = svg;
-          return;
+          $('arch').innerHTML = svg; return;
         }
         throw new Error('Paste a fenced `aveva-arch`/`json` block or raw JSON.');
       }catch(e){
@@ -147,6 +165,7 @@
     $('btnLoad').addEventListener('click', loadRenderer);
     $('btnSample').addEventListener('click', loadSample);
     $('btnWrap').addEventListener('click', wrapFence);
+    $('btnConvert').addEventListener('click', convertSchema);
     $('btnRender').addEventListener('click', render);
   </script>
 </body>
