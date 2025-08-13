@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>AVEVA Architecture Renderer — Demo (v1.6)</title>
+  <title>AVEVA Architecture Renderer — Demo (v1.7)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     body{font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0b1020;color:#e7ecf4;margin:0}
@@ -11,8 +11,7 @@
     .card{background:#141a2a;border:1px solid #1f2742;border-radius:12px;padding:14px}
     .label{font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:12px;opacity:.9}
     textarea{width:100%;height:320px;background:#0e1220;color:#e7ecf4;border:1px solid #1f2742;border-radius:10px;padding:10px;resize:vertical}
-    input[type="text"], input[type="number"]{background:#0e1220;color:#e7ecf4;border:1px solid #1f2742;border-radius:10px;padding:10px}
-    input[type="text"]{width:100%}
+    input[type="text"]{width:100%;background:#0e1220;color:#e7ecf4;border:1px solid #1f2742;border-radius:10px;padding:10px}
     .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     button{background:#5cc8f6;color:#0a0e1a;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
     button.secondary{background:#9de2d5}
@@ -28,8 +27,8 @@
 <body>
   <header>
     <div class="row" style="justify-content:space-between">
-      <div><strong>AVEVA Architecture Renderer — Demo</strong> <span class="small">v1.6</span></div>
-      <div class="small">Accepts <code>aveva-arch</code> fence, <code>json</code> fence, or raw JSON</div>
+      <div><strong>AVEVA Architecture Renderer — Demo</strong> <span class="small">v1.7</span></div>
+      <div class="small">Accepts <code>aveva-arch</code> fence, <code>json</code> fence, or raw JSON • Auto-layout ON by default</div>
     </div>
   </header>
 
@@ -51,22 +50,23 @@
         <button class="secondary" id="btnSampleAuto">Load sample (auto)</button>
         <button class="secondary" id="btnSamplePinned">Load sample (pinned)</button>
         <button id="btnWrap">Wrap as `aveva-arch`</button>
+        <button class="ghost" id="btnConvert">Convert to schema</button>
       </div>
 
       <div class="row" style="margin-top:10px">
-        <label class="inline"><input type="checkbox" id="chkAuto" />Use auto-layout</label>
+        <label class="inline"><input type="checkbox" id="chkAuto" checked />Use auto-layout</label>
         <span class="small">Canvas:</span>
         <input id="w" type="number" value="1400" min="800" step="20" style="width:110px" />
         <input id="h" type="number" value="960"  min="600" step="20" style="width:110px" />
         <button id="btnRender" class="ghost" disabled>Render</button>
       </div>
 
-      <p class="small">Tip: For pinned diagrams with explicit <code>x/y</code>, leave auto-layout OFF. For quick flows, turn it ON.</p>
+      <p class="small">If Perplexity returns a different schema (zones/lan/components), click <strong>Convert to schema</strong> first.</p>
     </div>
 
     <div class="card">
       <div class="label">Rendered SVG</div>
-      <div id="arch">No SVG yet. Load renderer → paste output → Render.</div>
+      <div id="arch">No SVG yet. Load renderer → paste output → Convert (if needed) → Render.</div>
     </div>
   </div>
 
@@ -100,6 +100,21 @@
       catch { alert('Paste valid JSON first.'); }
     }
 
+    function convertToSchema(){
+      try{
+        if(!AVEVA) throw new Error('Renderer not loaded.');
+        const text = $('llmText').value.trim();
+        const obj = text.startsWith('```') ? AVEVA.parseAvevaArch(AVEVA.extractAvevaBlock(text))
+                                           : JSON.parse(text);
+        const coerced = AVEVA.coerceToSchema(obj);
+        $('llmText').value = '```aveva-arch\\n' + JSON.stringify(coerced, null, 2) + '\\n```';
+        $('arch').innerHTML = '<span class="ok">Converted to canonical schema.</span>';
+      }catch(e){
+        $('arch').innerHTML = '<span class="err">Convert error:</span> ' + e.message;
+        console.error(e);
+      }
+    }
+
     function render(){
       try{
         if(!AVEVA) throw new Error('Renderer not loaded yet.');
@@ -108,10 +123,10 @@
         const width = parseInt($('w').value, 10) || 1400;
         const height = parseInt($('h').value, 10) || 960;
 
-        let data = null;
-        if (/```/.test(text)) data = AVEVA.parseAvevaArch(AVEVA.extractAvevaBlock(text));
-        else if (text.startsWith('{')) data = JSON.parse(text);
-        else throw new Error('Paste a fenced `aveva-arch`/`json` block or raw JSON.');
+        // Always coerce before rendering (handles near-miss schemas)
+        const data = text.startsWith('```')
+          ? AVEVA.coerceToSchema(AVEVA.parseAvevaArch(AVEVA.extractAvevaBlock(text)))
+          : AVEVA.coerceToSchema(JSON.parse(text));
 
         const svg = AVEVA.renderAvevaArch(data, { width, height, autolayout: useAuto });
         $('arch').innerHTML = svg;
@@ -161,49 +176,5 @@
 
     function loadSamplePinned(){
       const s = [
-        '```aveva-arch',
+        '```json',
         '{',
-        '  "version": 1,',
-        '  "metadata": {"title": "Pinned Layout", "subtitle": "Three lanes, fixed columns"},',
-        '  "lanes": [',
-        '    {"id": "ops", "title": "Operations LAN"},',
-        '    {"id": "sup", "title": "Supervisory"},',
-        '    {"id": "dev", "title": "Device Network"}',
-        '  ],',
-        '  "nodes": [',
-        '    {"id": "gr", "lane": "ops", "kind": "database", "title": "Galaxy Repository", "x": 80, "y": 24, "w": 240, "h": 80},',
-        '    {"id": "aos_a", "lane": "ops", "kind": "app", "title": "Object Server A", "x": 360, "y": 24, "w": 240, "h": 80},',
-        '    {"id": "aos_b", "lane": "ops", "kind": "app", "title": "Object Server B", "x": 640, "y": 24, "w": 240, "h": 80},',
-        '    {"id": "hist", "lane": "sup", "kind": "database", "title": "Historian", "x": 360, "y": 24, "w": 240, "h": 80},',
-        '    {"id": "rmc", "lane": "sup", "kind": "app", "title": "RMC", "x": 640, "y": 24, "w": 240, "h": 80},',
-        '    {"id": "devnet", "lane": "dev", "kind": "edge", "title": "Device Network", "x": 360, "y": 24, "w": 260, "h": 80}',
-        '  ],',
-        '  "edges": [',
-        '    {"from": "gr", "to": "aos_a", "style": "solid", "label": "Config"},',
-        '    {"from": "gr", "to": "aos_b", "style": "solid", "label": "Config"},',
-        '    {"from": "aos_a", "to": "hist", "style": "solid", "label": "Process Data"},',
-        '    {"from": "aos_b", "to": "hist", "style": "solid", "label": "Process Data"},',
-        '    {"from": "hist", "to": "rmc", "style": "dashed", "label": "RMC"},',
-        '    {"from": "aos_a", "to": "devnet", "style": "solid", "label": "I/O"}',
-        '  ]',
-        '}',
-        '```'
-      ].join('\\n');
-      $('llmText').value = s;
-      $('chkAuto').checked = false;
-    }
-
-    $('btnLoad').addEventListener('click', loadRenderer);
-    $('btnWrap').addEventListener('click', wrapFence);
-    $('btnRender').addEventListener('click', render);
-    $('btnSampleAuto').addEventListener('click', loadSampleAuto);
-    $('btnSamplePinned').addEventListener('click', loadSamplePinned);
-
-    // Preload hash content if present
-    (function(){
-      const m = location.hash.match(/#llm=(.*)$/);
-      if (m) { try { $('llmText').value = decodeURIComponent(m[1]); } catch(e){} }
-    })();
-  </script>
-</body>
-</html>
