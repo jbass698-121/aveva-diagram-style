@@ -2,257 +2,307 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>AVEVA Architecture Renderer – Working Demo</title>
-
+  <title>AVEVA Architecture Renderer - Advanced NLP</title>
   <style>
     body {
-      font: 14px/1.4 system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       margin: 0;
-      background: #f8fafc;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: #ffffff;
+      min-height: 100vh;
+      box-shadow: 0 0 50px rgba(0,0,0,0.1);
     }
     
     header {
       background: linear-gradient(135deg, #0e1220 0%, #1a2332 100%);
       color: #fff;
-      padding: 16px 24px;
-      font-weight: 600;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 20px;
+      text-align: center;
     }
     
     .header-title {
-      font-size: 20px;
-      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0 0 8px 0;
     }
     
     .header-subtitle {
-      font-size: 14px;
-      opacity: 0.8;
-      margin: 4px 0 0 0;
+      font-size: 16px;
+      opacity: 0.9;
+      margin: 0;
     }
     
     #controls {
-      padding: 24px;
+      padding: 30px;
       background: #ffffff;
-      border-bottom: 1px solid #e2e8f0;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      border-bottom: 2px solid #f1f5f9;
     }
     
     label {
       display: block;
       font-weight: 600;
-      margin-bottom: 8px;
-      color: #374151;
+      margin-bottom: 10px;
+      color: #1e293b;
+      font-size: 16px;
+    }
+    
+    .help-text {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 15px;
+      padding: 12px;
+      background: #f8fafc;
+      border-left: 4px solid #3b82f6;
+      border-radius: 4px;
     }
     
     textarea {
       width: 100%;
-      height: 140px;
-      font: 13px/1.4 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      height: 150px;
+      font: 14px/1.5 'SF Mono', Monaco, 'Cascadia Code', monospace;
       resize: vertical;
       border: 2px solid #e2e8f0;
       border-radius: 8px;
-      padding: 12px;
-      background: #f8fafc;
-      transition: border-color 0.2s;
+      padding: 15px;
+      background: #ffffff;
+      transition: all 0.2s ease;
       box-sizing: border-box;
     }
     
     textarea:focus {
       outline: none;
       border-color: #3b82f6;
-      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
     
     .button-group {
       display: flex;
-      gap: 12px;
-      margin-top: 16px;
+      gap: 15px;
+      margin-top: 20px;
       flex-wrap: wrap;
+      align-items: center;
     }
     
     button {
-      padding: 10px 20px;
+      padding: 12px 24px;
       font-weight: 600;
-      border: 2px solid transparent;
-      border-radius: 6px;
+      border: none;
+      border-radius: 8px;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.2s ease;
       font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     
     .btn-primary {
       background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
       color: white;
-      border-color: #1d4ed8;
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
     }
     
     .btn-primary:hover {
       background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
     }
     
     .btn-download {
-      background: #f8fafc;
+      background: #ffffff;
       color: #374151;
-      border-color: #d1d5db;
+      border: 2px solid #d1d5db;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     
     .btn-download:hover:not(:disabled) {
-      background: #f3f4f6;
+      background: #f9fafb;
       border-color: #9ca3af;
       transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
     
     .btn-download:disabled {
       opacity: 0.5;
       cursor: not-allowed;
-      transform: none;
     }
     
     #svg-container {
-      overflow: auto;
-      padding: 24px;
+      padding: 30px;
       background: #ffffff;
-      margin: 0;
+      min-height: 600px;
     }
     
     #svg-container svg {
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      background: #ffffff;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-      max-width: 100%;
+      width: 100%;
       height: auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      background: #ffffff;
+      box-shadow: 0 4px 25px rgba(0,0,0,0.08);
     }
     
-    .example-text {
-      font-size: 12px;
-      color: #6b7280;
-      font-style: italic;
-      margin-bottom: 8px;
-    }
-    
-    .download-section {
-      background: #f8fafc;
-      padding: 16px 24px;
-      border-top: 1px solid #e2e8f0;
-    }
-    
-    .download-title {
-      font-weight: 600;
-      margin-bottom: 12px;
-      color: #374151;
-    }
-
-    .error-message {
-      background: #fee2e2;
-      color: #991b1b;
+    .status {
+      margin-top: 15px;
       padding: 12px;
       border-radius: 6px;
-      margin-top: 12px;
+      font-size: 14px;
       display: none;
+    }
+    
+    .status.success {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+    
+    .status.error {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+    
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
   </style>
 </head>
 
 <body>
-  <header>
-    <h1 class="header-title">AVEVA Architecture Renderer</h1>
-    <p class="header-subtitle">Professional architecture diagram generator</p>
-  </header>
+  <div class="container">
+    <header>
+      <h1 class="header-title">AVEVA Architecture Renderer</h1>
+      <p class="header-subtitle">Advanced Natural Language Processing for Architecture Diagrams</p>
+    </header>
 
-  <div id="controls">
-    <label for="user-input">Architecture Description:</label>
-    <div class="example-text">
-      Describe your architecture in plain English
+    <div id="controls">
+      <label for="user-input">Architecture Description:</label>
+      <div class="help-text">
+        <strong>Natural Language Support:</strong> Describe your architecture in plain English. 
+        The system intelligently recognizes components like "2 IO Servers", "Redundant Object Servers", 
+        "PLCs and RTUs", etc., and automatically places them in appropriate network zones.
+      </div>
+      <textarea id="user-input" placeholder="Example: We have Redundant Object Servers and a Historian in the process LAN, We have 2 IO Servers and 1 Telemetry Server on the Supervisory Network...">We have Redundant Object Servers and a Historian in the process LAN, We have 2 IO Servers and 1 Telemetry Server on the Supervisory Network. We have PLCs and RTUs on the Device Network. We have a PI Historian in the Perimeter Network and we have AVEVA Connect in the Future Expansion</textarea>
+      
+      <div class="button-group">
+        <button id="render-btn" class="btn-primary">
+          <span>🎨</span>
+          <span>Generate Architecture Diagram</span>
+        </button>
+        
+        <div style="margin-left: auto;">
+          <button id="download-svg" class="btn-download" disabled>
+            📄 Download SVG
+          </button>
+          <button id="download-png" class="btn-download" disabled>
+            🖼️ Download PNG
+          </button>
+          <button id="download-jpg" class="btn-download" disabled>
+            📸 Download JPG
+          </button>
+        </div>
+      </div>
+      
+      <div id="status" class="status"></div>
     </div>
-    <textarea id="user-input" placeholder="Example: We have analytics clients and RDS clients for future expansion...">We have analytics clients and RDS clients for future expansion. There's a historian in the perimeter network. Engineering clients connect through a secured process LAN. The supervisory network has IO servers for primary and secondary operations. Device communication includes safety systems, LOFS, CGSS, RPOP, and LHFS components.</textarea>
-    
-    <div class="button-group">
-      <button id="render-btn" class="btn-primary">🎨 Generate Architecture Diagram</button>
-    </div>
-    
-    <div id="error-message" class="error-message"></div>
-  </div>
 
-  <div class="download-section">
-    <div class="download-title">📥 Export Options</div>
-    <div class="button-group">
-      <button id="download-svg" class="btn-download" disabled>
-        📄 Download SVG
-      </button>
-      <button id="download-png" class="btn-download" disabled>
-        🖼️ Download PNG
-      </button>
-      <button id="download-jpg" class="btn-download" disabled>
-        📸 Download JPG
-      </button>
-    </div>
-  </div>
-
-  <div id="svg-container">
-    <div style="text-align: center; padding: 60px; color: #9ca3af;">
-      <div style="font-size: 24px; margin-bottom: 8px;">🏗️</div>
-      <div>Your architecture diagram will appear here</div>
-      <div style="font-size: 12px; margin-top: 8px;">Click "Generate Architecture Diagram" to start</div>
+    <div id="svg-container">
+      <div style="text-align: center; padding: 80px 20px; color: #64748b;">
+        <div style="font-size: 48px; margin-bottom: 20px;">🏗️</div>
+        <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Ready to Generate</div>
+        <div>Your architecture diagram will appear here</div>
+      </div>
     </div>
   </div>
 
   <script type="module">
-    // Import from the correct files
     import { renderAvevaArch, downloadSvg, downloadPng, downloadJpg } from './aveva-renderer-1.js';
-    import { convertNaturalLanguageToJSON } from './nlp-to-json.js';
+    import { renderFromNaturalLanguage } from './aveva-nlp-extension.js';
 
     let currentSvgString = null;
 
-    function showError(message) {
-      const errorDiv = document.getElementById('error-message');
-      errorDiv.textContent = message;
-      errorDiv.style.display = 'block';
-      setTimeout(() => {
-        errorDiv.style.display = 'none';
-      }, 5000);
+    function showStatus(message, type = 'success') {
+      const statusDiv = document.getElementById('status');
+      statusDiv.textContent = message;
+      statusDiv.className = `status ${type}`;
+      statusDiv.style.display = 'block';
+      
+      if (type === 'success') {
+        setTimeout(() => {
+          statusDiv.style.display = 'none';
+        }, 3000);
+      }
     }
 
-    function handleUserInput(raw) {
+    function setLoading(loading) {
+      const btn = document.getElementById('render-btn');
+      if (loading) {
+        btn.innerHTML = '<span class="loading"></span><span>Processing...</span>';
+        btn.disabled = true;
+      } else {
+        btn.innerHTML = '<span>🎨</span><span>Generate Architecture Diagram</span>';
+        btn.disabled = false;
+      }
+    }
+
+    async function handleUserInput(text) {
       try {
-        console.log('Processing input:', raw);
+        setLoading(true);
+        console.log('Processing input:', text);
         
-        const jsonData = convertNaturalLanguageToJSON(raw.trim());
-        console.log('Generated JSON:', jsonData);
-        
-        const svgString = renderAvevaArch(jsonData, {
+        const svgString = renderFromNaturalLanguage(text.trim(), {
           width: 1400,
           height: 1000
         });
-        
-        console.log('Generated SVG length:', svgString.length);
         
         document.getElementById('svg-container').innerHTML = svgString;
         currentSvgString = svgString;
         
         // Enable download buttons
-        document.getElementById('download-svg').disabled = false;
-        document.getElementById('download-png').disabled = false;
-        document.getElementById('download-jpg').disabled = false;
+        ['download-svg', 'download-png', 'download-jpg'].forEach(id => {
+          document.getElementById(id).disabled = false;
+        });
+        
+        showStatus('Architecture diagram generated successfully!', 'success');
         
       } catch (error) {
-        console.error('Rendering failed:', error);
-        showError(`Rendering failed: ${error.message}`);
+        console.error('Generation failed:', error);
+        showStatus(`Generation failed: ${error.message}`, 'error');
+      } finally {
+        setLoading(false);
       }
     }
 
     // Event listeners
     document.getElementById('render-btn').addEventListener('click', () => {
-      console.log('Render button clicked');
       const text = document.getElementById('user-input').value;
-      handleUserInput(text);
+      if (text.trim()) {
+        handleUserInput(text);
+      } else {
+        showStatus('Please enter an architecture description', 'error');
+      }
     });
 
     document.getElementById('download-svg').addEventListener('click', () => {
       if (currentSvgString) {
         downloadSvg(currentSvgString, 'architecture-diagram.svg');
+        showStatus('SVG downloaded successfully!');
       }
     });
 
@@ -263,8 +313,9 @@
             scale: 2,
             background: '#ffffff'
           });
+          showStatus('PNG downloaded successfully!');
         } catch (error) {
-          showError(`PNG download failed: ${error.message}`);
+          showStatus(`PNG download failed: ${error.message}`, 'error');
         }
       }
     });
@@ -277,18 +328,25 @@
             quality: 0.95,
             background: '#ffffff'
           });
+          showStatus('JPG downloaded successfully!');
         } catch (error) {
-          showError(`JPG download failed: ${error.message}`);
+          showStatus(`JPG download failed: ${error.message}`, 'error');
         }
       }
     });
 
     // Auto-render on page load
     document.addEventListener('DOMContentLoaded', () => {
-      console.log('Page loaded, attempting initial render');
       const initialText = document.getElementById('user-input').value;
       if (initialText.trim()) {
-        handleUserInput(initialText);
+        setTimeout(() => handleUserInput(initialText), 500);
+      }
+    });
+
+    // Enter key support
+    document.getElementById('user-input').addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'Enter') {
+        document.getElementById('render-btn').click();
       }
     });
   </script>
