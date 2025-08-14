@@ -1,254 +1,315 @@
-// aveva-nlp-extension.js - Enhanced Natural Language Processing Extension
-import { coerceToSchema, renderAvevaArch } from './aveva-renderer.js';
+// aveva-nlp-extension.js - World-Class Flexible Natural Language Processing
 
-// Enhanced component recognition patterns
+import { coerceToSchema, renderAvevaArch } from './aveva-renderer-1.js';
+
+// Comprehensive component recognition with flexible matching
 const COMPONENT_PATTERNS = {
-  database: /\b(database|db|historian|analytics|rds|data\s*store|repository|sql|nosql|oracle|postgres|mysql|mongo|pi)\b/i,
-  cloud: /\b(cloud|aws|azure|gcp|saas|paas|connect|hub|online|remote)\b/i,
-  edge: /\b(client|gateway|proxy|load\s*balancer|edge|engineering|workstation|desktop|mobile|app|frontend)\b/i,
-  server: /\b(server|backend|api|service|microservice|worker|processor|compute|vm|instance|io|rmc|lofs|cgss|rpop|lhfs)\b/i,
-  network: /\b(network|router|switch|firewall|dmz|vpn|safety)\b/i,
-  storage: /\b(storage|file\s*system|nas|san|s3|blob|disk|volume)\b/i,
-  security: /\b(security|auth|authentication|authorization|sso|ldap|active\s*directory|certificate|ssl|tls)\b/i,
-  monitoring: /\b(monitor|logging|metrics|alerts|observability|telemetry|dashboard)\b/i
+  // Database/Storage Components
+  database: {
+    patterns: [
+      /\b(?:database|db|historian|pi\s*historian|data\s*store|repository|sql|nosql|oracle|postgres|mysql|mongodb?)\b/gi,
+      /\b(?:historian|pi)\s*(?:server|system)?\b/gi
+    ],
+    aliases: ['historian', 'pi historian', 'data store', 'repository', 'db']
+  },
+  
+  // Server Components  
+  server: {
+    patterns: [
+      /\b(?:object\s*servers?|redundant\s*object\s*servers?|io\s*servers?|telemetry\s*servers?)\b/gi,
+      /\b(?:servers?|backend|api|service|microservice|worker|processor|compute|vm|instance)\b/gi,
+      /\b(?:rmc|lofs|cgss|rpop|lhfs)\s*(?:server|system)?\b/gi
+    ],
+    aliases: ['server', 'object server', 'io server', 'telemetry server', 'redundant object server']
+  },
+  
+  // Edge/Client Components
+  edge: {
+    patterns: [
+      /\b(?:clients?|gateways?|proxies?|load\s*balancers?|edges?|engineering\s*(?:clients?|workstations?))\b/gi,
+      /\b(?:workstations?|desktops?|mobiles?|apps?|frontends?|analytics\s*clients?|rds\s*clients?)\b/gi
+    ],
+    aliases: ['client', 'gateway', 'workstation', 'engineering client', 'analytics client']
+  },
+  
+  // Network/Device Components
+  network: {
+    patterns: [
+      /\b(?:plcs?|rtus?|safety\s*systems?|networks?|routers?|switches?|firewalls?)\b/gi,
+      /\b(?:dmz|vpn|device\s*communication|field\s*devices?)\b/gi
+    ],
+    aliases: ['plc', 'rtu', 'safety', 'network', 'router', 'switch']
+  },
+  
+  // Cloud/External Components
+  cloud: {
+    patterns: [
+      /\b(?:aveva\s*connect|cloud|aws|azure|gcp|saas|paas|connect|hub|online|remote)\b/gi
+    ],
+    aliases: ['cloud', 'aveva connect', 'saas', 'remote service']
+  }
 };
 
-// Enhanced zone patterns matching the architecture image
+// Enhanced zone detection with flexible patterns
 const ZONE_PATTERNS = {
   future_expansion: {
-    pattern: /\b(future\s*expansion|recommended\s*architecture|expansion)\b/i,
-    color: '#E8F4FD', // Light blue background
-    title: 'Future Expansion'
+    patterns: [
+      /\b(?:future\s*expansion|expansion|future|recommended\s*architecture)\b/gi,
+      /\b(?:aveva\s*connect|cloud\s*services?)\b/gi
+    ],
+    title: 'Future Expansion',
+    color: '#EEF2FF'
   },
+  
   perimeter_network: {
-    pattern: /\b(perimeter|dmz|external|public|internet)\b/i,
-    color: '#FFE6E6', // Light red background  
-    title: 'Perimeter Network (DMZ)'
+    patterns: [
+      /\b(?:perimeter\s*network|dmz|external|public|internet|perimeter)\b/gi,
+      /\b(?:pi\s*historian|external\s*historian)\b/gi
+    ],
+    title: 'Perimeter Network (DMZ)', 
+    color: '#FEF2F2'
   },
+  
   process_lan: {
-    pattern: /\b(process\s*lan|secured|certificate|tls)\b/i,
-    color: '#FFF2E6', // Light orange background
-    title: 'Process LAN (TLS 1.2+ Secured)'
+    patterns: [
+      /\b(?:process\s*lan|process\s*network|secured|certificate|tls|process)\b/gi,
+      /\b(?:object\s*servers?|redundant\s*object\s*servers?|historian)\b/gi
+    ],
+    title: 'Process LAN (TLS 1.2+ Secured)',
+    color: '#FFFBEB'
   },
+  
   supervisory_network: {
-    pattern: /\b(supervisory|control|network)\b/i,
-    color: '#F0F8FF', // Light blue background
-    title: 'Supervisory Network'  
+    patterns: [
+      /\b(?:supervisory\s*network|supervisory|control\s*network|control)\b/gi,
+      /\b(?:io\s*servers?|telemetry\s*servers?)\b/gi
+    ],
+    title: 'Supervisory Network',
+    color: '#F0F9FF'
   },
+  
   device_communication: {
-    pattern: /\b(device\s*communication|field|communication)\b/i,
-    color: '#E8F5E8', // Light green background
-    title: 'Device Communication Network'
+    patterns: [
+      /\b(?:device\s*(?:network|communication)|field|device|plcs?|rtus?)\b/gi,
+      /\b(?:field\s*devices?|control\s*devices?)\b/gi
+    ],
+    title: 'Device Communication Network',
+    color: '#F0FDF4'
   }
 };
 
-// Enhanced natural language parser
-function parseNaturalLanguage(text) {
-  const lanes = [];
-  const nodes = [];
-  const edges = [];
-  const bands = [];
-  const busses = [];
+// Intelligent component extractor
+function extractComponents(text) {
+  const components = [];
+  const sentences = text.split(/[.!?;]+/).filter(s => s.trim());
   
-  let currentLane = 'default';
-  const sentences = text.split(/[.!?]+/);
-  
-  // Extract zones/lanes first with enhanced styling
-  for (const [zoneId, zoneInfo] of Object.entries(ZONE_PATTERNS)) {
-    if (zoneInfo.pattern.test(text)) {
-      lanes.push({
-        id: zoneId,
-        title: zoneInfo.title
-      });
-      
-      // Add colored background band for each lane
-      bands.push({
-        id: `${zoneId}_bg`,
-        lane: zoneId,
-        y: 10,
-        h: 120,
-        color: zoneInfo.color,
-        label: ''
-      });
-    }
-  }
-  
-  // If no zones found, create default lanes like the architecture image
-  if (lanes.length === 0) {
-    const defaultLanes = [
-      { id: 'future_expansion', title: 'Future Expansion' },
-      { id: 'perimeter_network', title: 'Perimeter Network (DMZ)' }, 
-      { id: 'process_lan', title: 'Process LAN (TLS 1.2+ Secured)' },
-      { id: 'supervisory_network', title: 'Supervisory Network' },
-      { id: 'device_communication', title: 'Device Communication Network' }
-    ];
-    lanes.push(...defaultLanes);
+  sentences.forEach((sentence, sentenceIndex) => {
+    const trimmedSentence = sentence.trim();
+    if (!trimmedSentence) return;
     
-    // Add background bands for default lanes
-    defaultLanes.forEach((lane, index) => {
-      const colors = ['#E8F4FD', '#FFE6E6', '#FFF2E6', '#F0F8FF', '#E8F5E8'];
-      bands.push({
-        id: `${lane.id}_bg`,
-        lane: lane.id,
-        y: 10,
-        h: 120,
-        color: colors[index % colors.length],
-        label: ''
-      });
-    });
-  }
-  
-  // Extract components with enhanced recognition
-  sentences.forEach((sentence, idx) => {
-    for (const [kind, pattern] of Object.entries(COMPONENT_PATTERNS)) {
-      if (pattern.test(sentence)) {
-        const words = sentence.split(/\s+/);
-        const matchingWords = words.filter(word => pattern.test(word));
+    // Extract quantities and component names
+    const quantityMatches = [...trimmedSentence.matchAll(/(?:we\s+have\s+)?(?:(\d+)\s+)?([^,.]+?)(?:\s+(?:in|on|at)\s+the\s+([^,.]+?))?(?:[,.]\s*|$)/gi)];
+    
+    quantityMatches.forEach(match => {
+      const quantity = parseInt(match[1]) || 1;
+      const componentPhrase = match[2]?.trim();
+      const locationPhrase = match[3]?.trim();
+      
+      if (!componentPhrase) return;
+      
+      // Determine component type and create instances
+      const componentType = determineComponentType(componentPhrase);
+      const lane = determineLane(componentPhrase, locationPhrase, text);
+      
+      // Create multiple instances if quantity > 1
+      for (let i = 0; i < quantity; i++) {
+        const suffix = quantity > 1 ? ` ${String.fromCharCode(65 + i)}` : ''; // A, B, C...
+        const title = cleanComponentName(componentPhrase) + suffix;
         
-        matchingWords.forEach((word, wordIdx) => {
-          const cleanWord = word.replace(/[^\w\s]/g, '');
-          const id = `${kind}_${cleanWord.toLowerCase()}_${nodes.length}`;
-          
-          if (!nodes.find(n => n.title.toLowerCase() === cleanWord.toLowerCase())) {
-            // Assign to appropriate lane based on component type
-            let assignedLane = lanes[0]?.id || 'default';
-            
-            if (kind === 'database' || kind === 'storage') {
-              assignedLane = lanes.find(l => l.id.includes('device') || l.id.includes('supervisory'))?.id || assignedLane;
-            } else if (kind === 'edge' || kind === 'network') {
-              assignedLane = lanes.find(l => l.id.includes('perimeter') || l.id.includes('dmz'))?.id || assignedLane;  
-            } else if (kind === 'server') {
-              assignedLane = lanes.find(l => l.id.includes('supervisory'))?.id || assignedLane;
-            }
-            
-            nodes.push({
-              id,
-              lane: assignedLane,
-              kind,
-              title: cleanWord.charAt(0).toUpperCase() + cleanWord.slice(1),
-              sub: extractComponentDetails(sentence) || `${kind} component`
-            });
-          }
+        components.push({
+          id: `${componentType.kind}_${slugify(title)}_${components.length}`,
+          lane: lane,
+          kind: componentType.kind,
+          title: title,
+          sub: componentType.sub || determineSubtitle(componentPhrase, locationPhrase)
         });
       }
-    }
+    });
   });
   
-  // Create some default nodes if none found
-  if (nodes.length === 0) {
-    const defaultNodes = [
-      { id: 'analytics_clients', lane: 'future_expansion', kind: 'edge', title: 'Analytics Clients', sub: 'Future' },
-      { id: 'rds_clients', lane: 'future_expansion', kind: 'database', title: 'RDS Clients', sub: 'Future' },
-      { id: 'historian_b', lane: 'perimeter_network', kind: 'database', title: 'Historian B', sub: 'Active' },
-      { id: 'engineering_client', lane: 'process_lan', kind: 'edge', title: 'Engineering Client 2', sub: 'Active' },
-      { id: 'io_server_b', lane: 'supervisory_network', kind: 'server', title: 'IO server B', sub: 'Primary' },
-      { id: 'io_server_c', lane: 'supervisory_network', kind: 'server', title: 'IO server C', sub: 'Secondary' },
-      { id: 'safety', lane: 'device_communication', kind: 'network', title: 'Safety', sub: 'Critical' },
-      { id: 'lofs', lane: 'device_communication', kind: 'server', title: 'LOFS', sub: 'Active' },
-      { id: 'cgss', lane: 'device_communication', kind: 'server', title: 'CGSS', sub: 'Active' },
-      { id: 'rpop', lane: 'device_communication', kind: 'server', title: 'RPOP', sub: 'Active' },
-      { id: 'lhfs', lane: 'device_communication', kind: 'server', title: 'LHFS', sub: 'Active' }
-    ];
-    nodes.push(...defaultNodes);
+  return components;
+}
+
+// Intelligent component type determination
+function determineComponentType(phrase) {
+  const lowerPhrase = phrase.toLowerCase();
+  
+  for (const [kind, config] of Object.entries(COMPONENT_PATTERNS)) {
+    for (const pattern of config.patterns) {
+      if (pattern.test(phrase)) {
+        return {
+          kind: kind,
+          sub: getSubtitle(kind, phrase)
+        };
+      }
+    }
   }
   
-  // Add colored busses for network connections (like in the architecture image)
-  const networkBusses = [
-    { id: 'perimeter_bus', lane: 'perimeter_network', y: 80, h: 8, color: '#FF4444', label: 'RMC RMC RMC' },
-    { id: 'process_bus', lane: 'process_lan', y: 80, h: 8, color: '#FFA500', label: 'Process LAN (Certificate Based TLS 1.2 Secured)' },
-    { id: 'device_bus', lane: 'device_communication', y: 80, h: 8, color: '#00AA44', label: 'Device Communication' }
-  ];
-  busses.push(...networkBusses);
+  // Default fallback
+  return { kind: 'app', sub: 'Component' };
+}
+
+// Intelligent lane determination
+function determineLane(componentPhrase, locationPhrase, fullText) {
+  const searchText = `${componentPhrase} ${locationPhrase || ''} ${fullText}`.toLowerCase();
   
-  // Infer basic connections
-  inferConnections(nodes, edges, text);
+  let bestMatch = { lane: 'process_lan', score: 0 };
+  
+  for (const [laneId, config] of Object.entries(ZONE_PATTERNS)) {
+    let score = 0;
+    
+    for (const pattern of config.patterns) {
+      const matches = searchText.match(pattern);
+      if (matches) {
+        score += matches.length * 10;
+      }
+    }
+    
+    // Bonus for location context
+    if (locationPhrase) {
+      const locationScore = config.patterns.some(p => p.test(locationPhrase)) ? 20 : 0;
+      score += locationScore;
+    }
+    
+    if (score > bestMatch.score) {
+      bestMatch = { lane: laneId, score };
+    }
+  }
+  
+  return bestMatch.lane;
+}
+
+// Helper functions
+function getSubtitle(kind, phrase) {
+  const subtitles = {
+    database: 'Data Storage',
+    server: 'Processing',
+    edge: 'Interface',
+    network: 'Control',
+    cloud: 'External'
+  };
+  
+  if (phrase.toLowerCase().includes('redundant')) return 'Redundant';
+  if (phrase.toLowerCase().includes('primary')) return 'Primary';
+  if (phrase.toLowerCase().includes('secondary')) return 'Secondary';
+  if (phrase.toLowerCase().includes('telemetry')) return 'Telemetry';
+  
+  return subtitles[kind] || 'Active';
+}
+
+function cleanComponentName(phrase) {
+  return phrase
+    .replace(/^\d+\s+/, '') // Remove leading numbers
+    .replace(/\b(?:redundant|primary|secondary)\s+/gi, '') // Remove status words
+    .trim()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function slugify(text) {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+function determineSubtitle(componentPhrase, locationPhrase) {
+  const phrase = `${componentPhrase} ${locationPhrase || ''}`.toLowerCase();
+  
+  if (phrase.includes('redundant')) return 'Redundant';
+  if (phrase.includes('primary')) return 'Primary'; 
+  if (phrase.includes('secondary')) return 'Secondary';
+  if (phrase.includes('telemetry')) return 'Telemetry';
+  if (phrase.includes('future')) return 'Future';
+  
+  return 'Active';
+}
+
+// Main natural language parser
+function parseNaturalLanguage(text) {
+  console.log('Parsing text:', text);
+  
+  // Create standard lane structure
+  const lanes = Object.entries(ZONE_PATTERNS).map(([id, config]) => ({
+    id,
+    title: config.title
+  }));
+  
+  // Extract components intelligently
+  const nodes = extractComponents(text);
+  console.log('Extracted nodes:', nodes);
+  
+  // Generate basic connections between components in different lanes
+  const edges = generateConnections(nodes);
   
   return {
     version: 1,
-    metadata: { 
+    metadata: {
       title: 'Recommended Architecture for ISDA',
       subtitle: 'Future Expansion',
-      theme: 'light' // Use light theme to match the architecture image
+      theme: 'light'
     },
     lanes,
     nodes,
     edges,
     notes: [],
-    bands,
-    busses
+    bands: [],
+    busses: []
   };
 }
 
-// Helper functions
-function extractComponentDetails(sentence) {
-  const detailPattern = /\(([^)]+)\)|"([^"]+)"|'([^']+)'/;
-  const match = sentence.match(detailPattern);
-  return match ? match[1] || match[2] || match[3] : null;
-}
-
-function inferConnections(nodes, edges, originalText) {
-  const connectionPatterns = [
-    /(\w+)\s+connects?\s+to\s+(\w+)/gi,
-    /(\w+)\s+talks?\s+to\s+(\w+)/gi,
-    /(\w+)\s+sends?\s+to\s+(\w+)/gi,
-    /(\w+)\s+→\s+(\w+)/gi,
-    /(\w+)\s+->\s+(\w+)/gi
-  ];
+// Generate logical connections between components
+function generateConnections(nodes) {
+  const edges = [];
+  const laneOrder = ['future_expansion', 'perimeter_network', 'process_lan', 'supervisory_network', 'device_communication'];
   
-  connectionPatterns.forEach(pattern => {
-    let match;
-    while ((match = pattern.exec(originalText)) !== null) {
-      const fromNode = findNodeByName(nodes, match[1]);
-      const toNode = findNodeByName(nodes, match[2]);
-      
-      if (fromNode && toNode) {
-        edges.push({
-          from: fromNode.id,
-          to: toNode.id,
-          style: 'solid',
-          label: 'connects'
-        });
-      }
-    }
+  // Group nodes by lane
+  const nodesByLane = {};
+  nodes.forEach(node => {
+    if (!nodesByLane[node.lane]) nodesByLane[node.lane] = [];
+    nodesByLane[node.lane].push(node);
   });
   
-  // Add some default connections if none found
-  if (edges.length === 0 && nodes.length > 1) {
-    for (let i = 0; i < nodes.length - 1; i++) {
-      const from = nodes[i];
-      const to = nodes[i + 1];
-      if (from.lane !== to.lane) {
-        edges.push({
-          from: from.id,
-          to: to.id,
-          style: Math.random() > 0.5 ? 'solid' : 'dashed',
-          label: from.lane.includes('network') ? 'network' : 'data'
-        });
-      }
+  // Create connections between adjacent lanes
+  for (let i = 0; i < laneOrder.length - 1; i++) {
+    const currentLane = laneOrder[i];
+    const nextLane = laneOrder[i + 1];
+    
+    const currentNodes = nodesByLane[currentLane] || [];
+    const nextNodes = nodesByLane[nextLane] || [];
+    
+    if (currentNodes.length > 0 && nextNodes.length > 0) {
+      edges.push({
+        from: currentNodes[0].id,
+        to: nextNodes[0].id,
+        style: 'solid',
+        label: 'connects'
+      });
     }
   }
+  
+  return edges;
 }
 
-function findNodeByName(nodes, name) {
-  const cleanName = name.toLowerCase();
-  return nodes.find(n => 
-    n.title.toLowerCase().includes(cleanName) ||
-    n.id.toLowerCase().includes(cleanName)
-  );
-}
-
-// Enhanced renderer function
+// Main export function
 export function renderFromNaturalLanguage(input, options = {}) {
   try {
-    // First try existing coercion (handles JSON and structured formats)
-    const data = coerceToSchema(input);
+    console.log('Natural language input:', input);
+    const data = parseNaturalLanguage(input);
+    console.log('Parsed data:', data);
     return renderAvevaArch(data, options);
   } catch (error) {
-    // Fall back to natural language processing
-    console.log('Trying enhanced natural language parsing...');
-    const data = parseNaturalLanguage(input);
-    return renderAvevaArch(data, options);
+    console.error('NLP rendering failed:', error);
+    throw error;
   }
 }
 
-export { parseNaturalLanguage, COMPONENT_PATTERNS, ZONE_PATTERNS };
+export { parseNaturalLanguage };
