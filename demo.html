@@ -2,101 +2,126 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>AVEVA Architecture Renderer - Advanced NLP</title>
+  <title>AVEVA Architecture Generator - Multi-Layer Input</title>
   <style>
-    body {
-      font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    * {
+      box-sizing: border-box;
       margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       min-height: 100vh;
+      padding: 20px;
     }
     
     .container {
-      max-width: 1400px;
+      max-width: 1200px;
       margin: 0 auto;
       background: #ffffff;
-      min-height: 100vh;
-      box-shadow: 0 0 50px rgba(0,0,0,0.1);
+      border-radius: 16px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      overflow: hidden;
     }
     
-    header {
-      background: linear-gradient(135deg, #0e1220 0%, #1a2332 100%);
-      color: #fff;
-      padding: 20px;
+    .header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: white;
+      padding: 30px;
       text-align: center;
     }
     
-    .header-title {
+    .header h1 {
       font-size: 28px;
       font-weight: 700;
-      margin: 0 0 8px 0;
+      margin-bottom: 8px;
     }
     
-    .header-subtitle {
+    .header p {
       font-size: 16px;
       opacity: 0.9;
-      margin: 0;
     }
     
-    #controls {
-      padding: 30px;
+    .input-section {
+      padding: 40px;
       background: #ffffff;
-      border-bottom: 2px solid #f1f5f9;
     }
     
-    label {
+    .input-grid {
+      display: grid;
+      gap: 25px;
+      margin-bottom: 30px;
+    }
+    
+    .input-group {
+      background: #f8fafc;
+      padding: 20px;
+      border-radius: 12px;
+      border: 2px solid #e2e8f0;
+      transition: border-color 0.2s ease;
+    }
+    
+    .input-group:focus-within {
+      border-color: #3b82f6;
+      background: #ffffff;
+    }
+    
+    .input-label {
       display: block;
       font-weight: 600;
-      margin-bottom: 10px;
-      color: #1e293b;
       font-size: 16px;
+      color: #1e293b;
+      margin-bottom: 8px;
     }
     
-    .help-text {
+    .input-help {
       font-size: 13px;
       color: #64748b;
-      margin-bottom: 15px;
-      padding: 12px;
-      background: #f8fafc;
-      border-left: 4px solid #3b82f6;
-      border-radius: 4px;
+      margin-bottom: 12px;
+      padding: 10px;
+      background: #e0f2fe;
+      border-radius: 6px;
+      border-left: 4px solid #0ea5e9;
     }
     
-    textarea {
+    .input-field {
       width: 100%;
-      height: 150px;
-      font: 14px/1.5 'SF Mono', Monaco, 'Cascadia Code', monospace;
-      resize: vertical;
+      padding: 12px 16px;
       border: 2px solid #e2e8f0;
       border-radius: 8px;
-      padding: 15px;
+      font-size: 14px;
+      line-height: 1.5;
+      transition: border-color 0.2s ease;
       background: #ffffff;
-      transition: all 0.2s ease;
-      box-sizing: border-box;
     }
     
-    textarea:focus {
+    .input-field:focus {
       outline: none;
       border-color: #3b82f6;
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
     
-    .button-group {
-      display: flex;
-      gap: 15px;
-      margin-top: 20px;
-      flex-wrap: wrap;
-      align-items: center;
+    .input-field::placeholder {
+      color: #94a3b8;
     }
     
-    button {
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+    
+    .btn {
       padding: 12px 24px;
-      font-weight: 600;
       border: none;
       border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
       cursor: pointer;
       transition: all 0.2s ease;
-      font-size: 14px;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -108,50 +133,68 @@
       box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
     }
     
-    .btn-primary:hover {
+    .btn-primary:hover:not(:disabled) {
       background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
       transform: translateY(-2px);
       box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
     }
     
-    .btn-download {
+    .btn-secondary {
       background: #ffffff;
       color: #374151;
       border: 2px solid #d1d5db;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     
-    .btn-download:hover:not(:disabled) {
+    .btn-secondary:hover:not(:disabled) {
       background: #f9fafb;
       border-color: #9ca3af;
       transform: translateY(-1px);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
     
-    .btn-download:disabled {
+    .btn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+      transform: none;
     }
     
-    #svg-container {
+    .diagram-section {
       padding: 30px;
-      background: #ffffff;
-      min-height: 600px;
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
     }
     
-    #svg-container svg {
-      width: 100%;
-      height: auto;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
+    .diagram-container {
       background: #ffffff;
-      box-shadow: 0 4px 25px rgba(0,0,0,0.08);
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 20px;
+      min-height: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .diagram-container svg {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+    
+    .placeholder {
+      text-align: center;
+      color: #64748b;
+    }
+    
+    .placeholder-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
     }
     
     .status {
-      margin-top: 15px;
-      padding: 12px;
-      border-radius: 6px;
+      margin: 20px 0;
+      padding: 12px 16px;
+      border-radius: 8px;
       font-size: 14px;
       display: none;
     }
@@ -159,13 +202,26 @@
     .status.success {
       background: #dcfce7;
       color: #166534;
-      border: 1px solid #bbf7d0;
+      border: 2px solid #bbf7d0;
     }
     
     .status.error {
       background: #fef2f2;
       color: #dc2626;
-      border: 1px solid #fecaca;
+      border: 2px solid #fecaca;
+    }
+    
+    .download-section {
+      padding: 20px 30px;
+      background: #f1f5f9;
+      border-top: 1px solid #e2e8f0;
+      text-align: center;
+    }
+    
+    .download-title {
+      font-weight: 600;
+      margin-bottom: 15px;
+      color: #1e293b;
     }
     
     .loading {
@@ -186,56 +242,137 @@
 
 <body>
   <div class="container">
-    <header>
-      <h1 class="header-title">AVEVA Architecture Renderer</h1>
-      <p class="header-subtitle">Advanced Natural Language Processing for Architecture Diagrams</p>
-    </header>
+    <div class="header">
+      <h1>AVEVA Architecture Generator</h1>
+      <p>Multi-Layer Component Input System</p>
+    </div>
 
-    <div id="controls">
-      <label for="user-input">Architecture Description:</label>
-      <div class="help-text">
-        <strong>Natural Language Support:</strong> Describe your architecture in plain English. 
-        The system intelligently recognizes components like "2 IO Servers", "Redundant Object Servers", 
-        "PLCs and RTUs", etc., and automatically places them in appropriate network zones.
+    <div class="input-section">
+      <div class="input-grid">
+        
+        <div class="input-group">
+          <label class="input-label" for="future-input">🚀 Future Expansion</label>
+          <div class="input-help">
+            <strong>Examples:</strong> AVEVA Connect, Analytics Clients, Cloud Services, SaaS Platform, Remote Access
+          </div>
+          <input 
+            type="text" 
+            id="future-input" 
+            class="input-field"
+            placeholder="Enter comma-separated components (e.g., AVEVA Connect, Analytics Clients)"
+          />
+        </div>
+
+        <div class="input-group">
+          <label class="input-label" for="perimeter-input">🔒 Perimeter Network (DMZ)</label>
+          <div class="input-help">
+            <strong>Examples:</strong> PI Historian, AVEVA Historian, Firewall, Proxy Server, Web Server
+          </div>
+          <input 
+            type="text" 
+            id="perimeter-input" 
+            class="input-field"
+            placeholder="Enter comma-separated components (e.g., PI Historian, Firewall)"
+            value="AVEVA Historian, PI Historian"
+          />
+        </div>
+
+        <div class="input-group">
+          <label class="input-label" for="process-input">⚙️ Process LAN (TLS 1.2+ Secured)</label>
+          <div class="input-help">
+            <strong>Examples:</strong> Redundant Object Servers, Object Server, Process Historian, Certificate Manager
+          </div>
+          <input 
+            type="text" 
+            id="process-input" 
+            class="input-field"
+            placeholder="Enter comma-separated components (e.g., Object Server, Object Server, Process Historian)"
+            value="Redundant Object Servers"
+          />
+        </div>
+
+        <div class="input-group">
+          <label class="input-label" for="supervisory-input">🖥️ Supervisory Network</label>
+          <div class="input-help">
+            <strong>Examples:</strong> IO Server, Telemetry Server, Engineering Client, HMI Workstation, SCADA Server
+          </div>
+          <input 
+            type="text" 
+            id="supervisory-input" 
+            class="input-field"
+            placeholder="Enter comma-separated components (e.g., IO Server, IO Server, Telemetry Server)"
+            value="IO Server, IO Server, Telemetry Server"
+          />
+        </div>
+
+        <div class="input-group">
+          <label class="input-label" for="device-input">🔧 Device Communication Network</label>
+          <div class="input-help">
+            <strong>Examples:</strong> PLC, RTU, Safety System, Field Devices, Control Devices, Sensors
+          </div>
+          <input 
+            type="text" 
+            id="device-input" 
+            class="input-field"
+            placeholder="Enter comma-separated components (e.g., PLC, RTU, Safety System)"
+            value="PLC, RTU"
+          />
+        </div>
+
       </div>
-      <textarea id="user-input" placeholder="Example: We have Redundant Object Servers and a Historian in the process LAN, We have 2 IO Servers and 1 Telemetry Server on the Supervisory Network...">We have Redundant Object Servers and a Historian in the process LAN, We have 2 IO Servers and 1 Telemetry Server on the Supervisory Network. We have PLCs and RTUs on the Device Network. We have a PI Historian in the Perimeter Network and we have AVEVA Connect in the Future Expansion</textarea>
-      
-      <div class="button-group">
-        <button id="render-btn" class="btn-primary">
+
+      <div class="controls">
+        <button id="generate-btn" class="btn btn-primary">
           <span>🎨</span>
           <span>Generate Architecture Diagram</span>
         </button>
-        
-        <div style="margin-left: auto;">
-          <button id="download-svg" class="btn-download" disabled>
-            📄 Download SVG
-          </button>
-          <button id="download-png" class="btn-download" disabled>
-            🖼️ Download PNG
-          </button>
-          <button id="download-jpg" class="btn-download" disabled>
-            📸 Download JPG
-          </button>
-        </div>
+        <button id="clear-btn" class="btn btn-secondary">
+          <span>🗑️</span>
+          <span>Clear All</span>
+        </button>
       </div>
-      
+
       <div id="status" class="status"></div>
     </div>
 
-    <div id="svg-container">
-      <div style="text-align: center; padding: 80px 20px; color: #64748b;">
-        <div style="font-size: 48px; margin-bottom: 20px;">🏗️</div>
-        <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Ready to Generate</div>
-        <div>Your architecture diagram will appear here</div>
+    <div class="diagram-section">
+      <div id="diagram-container" class="diagram-container">
+        <div class="placeholder">
+          <div class="placeholder-icon">🏗️</div>
+          <div><strong>Ready to Generate</strong></div>
+          <div>Enter components in the fields above and click "Generate Architecture Diagram"</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="download-section">
+      <div class="download-title">📥 Export Options</div>
+      <div class="controls">
+        <button id="download-svg" class="btn btn-secondary" disabled>
+          📄 Download SVG
+        </button>
+        <button id="download-png" class="btn btn-secondary" disabled>
+          🖼️ Download PNG
+        </button>
+        <button id="download-jpg" class="btn btn-secondary" disabled>
+          📸 Download JPG
+        </button>
       </div>
     </div>
   </div>
 
   <script type="module">
     import { renderAvevaArch, downloadSvg, downloadPng, downloadJpg } from './aveva-renderer-1.js';
-    import { renderFromNaturalLanguage } from './aveva-nlp-extension.js';
 
     let currentSvgString = null;
+
+    const layerConfig = {
+      'future-input': { id: 'future_expansion', title: 'Future Expansion' },
+      'perimeter-input': { id: 'perimeter_network', title: 'Perimeter Network (DMZ)' },
+      'process-input': { id: 'process_lan', title: 'Process LAN (TLS 1.2+ Secured)' },
+      'supervisory-input': { id: 'supervisory_network', title: 'Supervisory Network' },
+      'device-input': { id: 'device_communication', title: 'Device Communication Network' }
+    };
 
     function showStatus(message, type = 'success') {
       const statusDiv = document.getElementById('status');
@@ -251,9 +388,9 @@
     }
 
     function setLoading(loading) {
-      const btn = document.getElementById('render-btn');
+      const btn = document.getElementById('generate-btn');
       if (loading) {
-        btn.innerHTML = '<span class="loading"></span><span>Processing...</span>';
+        btn.innerHTML = '<span class="loading"></span><span>Generating...</span>';
         btn.disabled = true;
       } else {
         btn.innerHTML = '<span>🎨</span><span>Generate Architecture Diagram</span>';
@@ -261,26 +398,145 @@
       }
     }
 
-    async function handleUserInput(text) {
+    function slugify(text) {
+      return text.toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '');
+    }
+
+    function determineComponentType(name) {
+      const lowerName = name.toLowerCase();
+      
+      if (/\b(historian|database|db|pi|data\s*store)\b/.test(lowerName)) {
+        return { kind: 'database', sub: 'Data Storage' };
+      } else if (/\b(server|io\s*server|telemetry\s*server|object\s*server)\b/.test(lowerName)) {
+        return { kind: 'server', sub: 'Processing' };
+      } else if (/\b(client|workstation|hmi|engineering|analytics)\b/.test(lowerName)) {
+        return { kind: 'edge', sub: 'Interface' };
+      } else if (/\b(plc|rtu|safety|control|device|sensor)\b/.test(lowerName)) {
+        return { kind: 'network', sub: 'Control' };
+      } else if (/\b(connect|cloud|saas|remote)\b/.test(lowerName)) {
+        return { kind: 'cloud', sub: 'External' };
+      } else {
+        return { kind: 'app', sub: 'Component' };
+      }
+    }
+
+    function parseComponents() {
+      const lanes = [];
+      const nodes = [];
+      let nodeCounter = 0;
+
+      // Create lanes
+      Object.values(layerConfig).forEach(config => {
+        lanes.push({
+          id: config.id,
+          title: config.title
+        });
+      });
+
+      // Parse components from inputs
+      Object.entries(layerConfig).forEach(([inputId, config]) => {
+        const input = document.getElementById(inputId);
+        const value = input.value.trim();
+        
+        if (value) {
+          const components = value.split(',').map(c => c.trim()).filter(c => c.length > 0);
+          
+          components.forEach((component, index) => {
+            const componentType = determineComponentType(component);
+            const title = component.trim();
+            
+            // Add suffix for duplicate components (A, B, C, etc.)
+            const duplicates = components.slice(0, index).filter(c => 
+              c.trim().toLowerCase() === title.toLowerCase()
+            ).length;
+            
+            const displayTitle = duplicates > 0 ? `${title} ${String.fromCharCode(65 + duplicates)}` : title;
+            
+            nodes.push({
+              id: `${config.id}_${slugify(title)}_${nodeCounter++}`,
+              lane: config.id,
+              kind: componentType.kind,
+              title: displayTitle,
+              sub: componentType.sub
+            });
+          });
+        }
+      });
+
+      // Generate connections between adjacent lanes
+      const edges = [];
+      const laneOrder = ['future_expansion', 'perimeter_network', 'process_lan', 'supervisory_network', 'device_communication'];
+      const nodesByLane = {};
+      
+      nodes.forEach(node => {
+        if (!nodesByLane[node.lane]) nodesByLane[node.lane] = [];
+        nodesByLane[node.lane].push(node);
+      });
+
+      for (let i = 0; i < laneOrder.length - 1; i++) {
+        const currentLane = laneOrder[i];
+        const nextLane = laneOrder[i + 1];
+        
+        const currentNodes = nodesByLane[currentLane] || [];
+        const nextNodes = nodesByLane[nextLane] || [];
+        
+        if (currentNodes.length > 0 && nextNodes.length > 0) {
+          edges.push({
+            from: currentNodes[0].id,
+            to: nextNodes.id,
+            style: 'solid',
+            label: 'connects'
+          });
+        }
+      }
+
+      return {
+        version: 1,
+        metadata: {
+          title: 'Recommended Architecture for ISDA',
+          subtitle: 'Multi-Layer Configuration',
+          theme: 'light'
+        },
+        lanes,
+        nodes,
+        edges,
+        notes: [],
+        bands: [],
+        busses: []
+      };
+    }
+
+    function generateDiagram() {
       try {
         setLoading(true);
-        console.log('Processing input:', text);
         
-        const svgString = renderFromNaturalLanguage(text.trim(), {
+        const architectureData = parseComponents();
+        console.log('Generated architecture data:', architectureData);
+        
+        if (architectureData.nodes.length === 0) {
+          showStatus('Please enter at least one component in any layer', 'error');
+          return;
+        }
+
+        const svgString = renderAvevaArch(architectureData, {
           width: 1400,
           height: 1000
         });
-        
-        document.getElementById('svg-container').innerHTML = svgString;
+
+        document.getElementById('diagram-container').innerHTML = svgString;
         currentSvgString = svgString;
-        
+
         // Enable download buttons
         ['download-svg', 'download-png', 'download-jpg'].forEach(id => {
           document.getElementById(id).disabled = false;
         });
-        
-        showStatus('Architecture diagram generated successfully!', 'success');
-        
+
+        showStatus(`Successfully generated diagram with ${architectureData.nodes.length} components!`, 'success');
+
       } catch (error) {
         console.error('Generation failed:', error);
         showStatus(`Generation failed: ${error.message}`, 'error');
@@ -289,15 +545,30 @@
       }
     }
 
+    function clearAll() {
+      Object.keys(layerConfig).forEach(inputId => {
+        document.getElementById(inputId).value = '';
+      });
+      
+      document.getElementById('diagram-container').innerHTML = `
+        <div class="placeholder">
+          <div class="placeholder-icon">🏗️</div>
+          <div><strong>Ready to Generate</strong></div>
+          <div>Enter components in the fields above and click "Generate Architecture Diagram"</div>
+        </div>
+      `;
+      
+      ['download-svg', 'download-png', 'download-jpg'].forEach(id => {
+        document.getElementById(id).disabled = true;
+      });
+      
+      currentSvgString = null;
+      showStatus('All inputs cleared', 'success');
+    }
+
     // Event listeners
-    document.getElementById('render-btn').addEventListener('click', () => {
-      const text = document.getElementById('user-input').value;
-      if (text.trim()) {
-        handleUserInput(text);
-      } else {
-        showStatus('Please enter an architecture description', 'error');
-      }
-    });
+    document.getElementById('generate-btn').addEventListener('click', generateDiagram);
+    document.getElementById('clear-btn').addEventListener('click', clearAll);
 
     document.getElementById('download-svg').addEventListener('click', () => {
       if (currentSvgString) {
@@ -335,18 +606,17 @@
       }
     });
 
-    // Auto-render on page load
+    // Auto-generate on page load with pre-filled data
     document.addEventListener('DOMContentLoaded', () => {
-      const initialText = document.getElementById('user-input').value;
-      if (initialText.trim()) {
-        setTimeout(() => handleUserInput(initialText), 500);
-      }
+      setTimeout(() => {
+        generateDiagram();
+      }, 500);
     });
 
-    // Enter key support
-    document.getElementById('user-input').addEventListener('keydown', (e) => {
+    // Ctrl+Enter to generate
+    document.addEventListener('keydown', (e) => {
       if (e.ctrlKey && e.key === 'Enter') {
-        document.getElementById('render-btn').click();
+        generateDiagram();
       }
     });
   </script>
